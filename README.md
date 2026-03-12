@@ -3,6 +3,8 @@
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 [![Unraid](https://img.shields.io/badge/Platform-Unraid-f4731c.svg)](https://unraid.net)
 
+![Aperçu de l'interface](assets/interface.png)
+
 **Unraid Docker Startup Orchestrator** est un outil web ultra-léger et intelligent conçu pour remplacer le démarrage basique des conteneurs Docker dans Unraid par une séquence de démarrage robuste, journalisée et ordonnée.
 
 Fini les délais (`sleep`) arbitraires. Assurez-vous que votre base de données ou votre VPN est **réellement opérationnel** avant de lancer vos applications dépendantes.
