@@ -2,21 +2,9 @@
 <html lang="fr">
 <head>
 <meta charset="UTF-8">
+  <meta http-equiv="Content-Security-Policy" content="img-src * data: blob:;">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Unraid Docker Startup Orchestrator</title>
-<!--
-  Unraid Docker Startup Orchestrator
-  Copyright (c) 2026 cbh17000
-  Licence MIT — https://opensource.org/licenses/MIT
-
-  Permission is hereby granted, free of charge, to any person obtaining a copy
-  of this software to deal in the Software without restriction, including the
-  rights to use, copy, modify, merge, publish, distribute, sublicense, and/or
-  sell copies of the Software, subject to the above copyright notice appearing
-  in all copies or substantial portions of the Software.
-
-  THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND.
--->
 <style>
   @import url('https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;600;700&family=Syne:wght@400;600;800&display=swap');
   :root {
@@ -113,10 +101,18 @@
   .group-drop-zone.drag-over{border-color:var(--accent);background:rgba(244,115,28,.05)}
   .drop-hint{font-family:var(--mono);font-size:10px;color:var(--muted);font-style:italic;text-align:center;padding:6px;display:none}
   .group-drop-zone.empty .drop-hint{display:block}
-  .col-headers{display:grid;grid-template-columns:18px 1fr 80px 80px 44px 34px;gap:7px;margin-bottom:5px}
+  
+  /* UPDATED CSS for ICONS */
+  .col-headers{display:grid;grid-template-columns:18px 24px 1fr 80px 80px 44px 34px;gap:7px;margin-bottom:5px}
+  .container-row{display:grid;grid-template-columns:18px 24px 1fr 80px 80px 44px 34px;gap:7px;align-items:center;margin-bottom:6px;border-radius:4px;transition:outline .1s}
+  .container-icon{width:22px;height:22px;border-radius:4px;object-fit:contain;flex-shrink:0;opacity:.85}
+  .container-icon[src*='svg+xml']{opacity:.5}
+  .chip-icon{width:14px;height:14px;border-radius:3px;object-fit:contain;flex-shrink:0;opacity:.85}
+  .chip-icon[src*='svg+xml']{opacity:.4}
+  .icon-placeholder{width:22px;height:22px;display:inline-block}
+
   .lbl{font-family:var(--mono);font-size:10px;color:var(--muted);text-align:center}
   .lbl.left{text-align:left;padding-left:2px}
-  .container-row{display:grid;grid-template-columns:18px 1fr 80px 80px 44px 34px;gap:7px;align-items:center;margin-bottom:6px;border-radius:4px;transition:outline .1s}
   .container-row.dragging-row{opacity:.4}
   .container-row.drag-over-row{outline:1px solid var(--accent)}
   .input{background:var(--bg);border:1px solid var(--border);border-radius:5px;padding:6px 9px;color:var(--text);font-family:var(--mono);font-size:11px;outline:none;transition:border-color .15s;width:100%}
@@ -209,7 +205,6 @@
   </div>
 </header>
 
-<!-- GUIDE -->
 <div class="guide">
   <div class="guide-header" id="guide-toggle">
     <span class="guide-title"><span data-i18n="guide_title">&#9432; GUIDE D'UTILISATION</span></span>
@@ -218,7 +213,6 @@
   <div class="guide-body" id="guide-body">
 </div></div>
 
-<!-- IMPORT -->
 <div class="section-title" data-i18n="section_import">Import docker ps</div>
 <div class="import-box">
   <div class="import-top">
@@ -241,7 +235,6 @@
 </div>
 
 
-<!-- POOL -->
 <div class="pool-section">
   <div class="section-title" data-i18n="section_pool">Conteneurs non assignés</div>
   <div class="pool-box" id="pool-box">
@@ -249,7 +242,6 @@
   </div>
 </div>
 
-<!-- GROUPS -->
 <div class="section-title" data-i18n="section_groups">Groupes &amp; ordre de démarrage</div>
 <div id="groups-wrapper" class="groups-locked">
 <div class="lock-notice visible" id="lock-notice">&#128274; Importez vos conteneurs via la commande <code>docker ps</code> ci-dessus avant de creer des groupes.</div>
@@ -287,10 +279,7 @@
 <div class="tpl-desc" id="tpl-desc"></div>
 <div style="height:8px"></div>
 <button class="btn-add-group" id="btn-add-group"><span data-i18n="btn_add_group">+ Ajouter un groupe vide</span></button>
-</div><!-- /groups-wrapper -->
-
-<!-- CONFIG -->
-<div class="section-title" data-i18n="section_config">Configuration</div>
+</div><div class="section-title" data-i18n="section_config">Configuration</div>
 <div class="config-bar">
   <button id="btn-export" onclick="exportConfig()">⬇ <span data-i18n="btn_export">Exporter</span></button>
   <label class="btn-like" id="btn-import-label">
@@ -300,7 +289,6 @@
   <span id="config-status"></span>
 </div>
 
-<!-- GENERATE -->
 <div class="section-title" data-i18n="section_generate">Générer</div>
 <button class="btn-generate" id="btn-generate"><span data-i18n="btn_generate">Générer le script bash</span></button>
 
@@ -312,9 +300,7 @@
   <div id="script-output"></div>
 </div>
 
-</div><!-- /wrap -->
-
-<script>
+</div><script>
 
 // ═══════════════════════════════════════════════════════════════
 // i18n — Système multilingue
@@ -984,6 +970,20 @@ function makeChip(name) {
   lbl.textContent = name;
 
   chip.appendChild(hdl);
+
+  // AppFeed Icon — fallback Docker officiel
+  var chipIconUrl = getAppfeedIcon(name) || DOCKER_FALLBACK_ICON;
+  var chipImg = document.createElement('img');
+  chipImg.className = 'chip-icon';
+  chipImg.referrerPolicy = 'no-referrer';
+  chipImg.crossOrigin = 'anonymous';
+  chipImg.src = chipIconUrl;
+  chipImg.onerror = function() {
+    this.src = DOCKER_FALLBACK_ICON;
+    this.onerror = null;
+  };
+  chip.appendChild(chipImg);
+
   chip.appendChild(lbl);
 
   chip.addEventListener('dragstart', function(e) {
@@ -1044,7 +1044,8 @@ function buildGroup(gi) {
   if (g.containers.length > 0) {
     var colH = document.createElement('div');
     colH.className = 'col-headers';
-    colH.innerHTML = '<span></span><span class="lbl left" data-i18n="col_container">Conteneur</span><span class="lbl" data-i18n="col_timeout">Timeout(s)</span><span class="lbl">wait_for</span><span class="lbl" data-i18n="col_active">actif</span><span></span>';
+    // Added an empty span for the Icon column
+    colH.innerHTML = '<span></span><span></span><span class="lbl left" data-i18n="col_container">Conteneur</span><span class="lbl" data-i18n="col_timeout">Timeout(s)</span><span class="lbl">wait_for</span><span class="lbl" data-i18n="col_active">actif</span><span></span>';
     body.appendChild(colH);
   }
 
@@ -1173,7 +1174,27 @@ function buildRow(gi, ci) {
   // Dim row if disabled
   if (c.enabled === false) { row.style.opacity = '0.45'; }
 
-  row.appendChild(hdl); row.appendChild(nIn); row.appendChild(tIn); row.appendChild(tw); row.appendChild(enWrap); row.appendChild(del);
+  // AppFeed Icon — fallback Docker officiel
+  var iconContainer = document.createElement('div');
+  var rowIconUrl = getAppfeedIcon(c.name) || DOCKER_FALLBACK_ICON;
+  var rowImg = document.createElement('img');
+  rowImg.className = 'container-icon';
+  rowImg.referrerPolicy = 'no-referrer';
+  rowImg.crossOrigin = 'anonymous';
+  rowImg.src = rowIconUrl;
+  rowImg.onerror = function() {
+    this.src = DOCKER_FALLBACK_ICON;
+    this.onerror = null;
+  };
+  iconContainer.appendChild(rowImg);
+
+  row.appendChild(hdl); 
+  row.appendChild(iconContainer); 
+  row.appendChild(nIn); 
+  row.appendChild(tIn); 
+  row.appendChild(tw); 
+  row.appendChild(enWrap); 
+  row.appendChild(del);
 
   // Row drag & drop reorder within group
   row.addEventListener('dragstart', (function(i,j,el){ return function(e){
@@ -1255,7 +1276,8 @@ function exportConfig() {
   var config = {
     version: 1,
     exportedAt: new Date().toISOString(),
-    groups: groups
+    groups: groups,
+    importedImages: importedImages
   };
   var json = JSON.stringify(config, null, 2);
   var blob = new Blob([json], { type: 'application/json' });
@@ -1288,6 +1310,9 @@ function importConfig(event) {
         }
       }
       groups = config.groups;
+      if (config.importedImages && typeof config.importedImages === 'object') {
+        importedImages = config.importedImages;
+      }
       render();
       renderPool();
       var nb = groups.length;
@@ -1670,9 +1695,11 @@ var APPFEED_TTL   = 7 * 24 * 60 * 60 * 1000; // 7 jours en ms
 var appfeedData   = null; // tableau des apps une fois charge
 var appfeedReady  = false;
 
-// Map image -> categorie Unraid (construite depuis AppFeed)
-var appfeedImageMap = {};  // 'lscr.io/linuxserver/jellyfin' -> 'MediaApp:Video'
-var appfeedNameMap  = {};  // 'jellyfin' -> 'MediaApp:Video'
+// Map image -> categorie Unraid et Map -> Icône (construite depuis AppFeed)
+var appfeedImageMap = {};  
+var appfeedNameMap  = {};  
+var appfeedIconMap  = {}; // Nouveau dictionnaire pour les icônes
+var DOCKER_FALLBACK_ICON = "data:image/svg+xml,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 24 24%22%3E%3Cpath fill=%22%232496ED%22 d=%22M13.983 11.078h2.119a.186.186 0 00.186-.185V9.006a.186.186 0 00-.186-.186h-2.119a.185.185 0 00-.185.185v1.888c0 .102.083.185.185.185m-2.954-5.43h2.118a.186.186 0 00.186-.186V3.574a.186.186 0 00-.186-.185h-2.118a.185.185 0 00-.185.185v1.888c0 .102.082.185.185.185m0 2.716h2.118a.187.187 0 00.186-.186V6.29a.186.186 0 00-.186-.185h-2.118a.185.185 0 00-.185.185v1.887c0 .102.082.185.185.186m-2.93 0h2.12a.186.186 0 00.184-.186V6.29a.185.185 0 00-.185-.185H8.1a.185.185 0 00-.185.185v1.887c0 .102.083.185.185.186m-2.964 0h2.119a.186.186 0 00.185-.186V6.29a.185.185 0 00-.185-.185H5.136a.186.186 0 00-.186.185v1.887c0 .102.084.185.186.186m5.893 2.715h2.118a.186.186 0 00.186-.185V9.006a.186.186 0 00-.186-.186h-2.118a.185.185 0 00-.185.185v1.888c0 .102.082.185.185.185m-2.93 0h2.12a.185.185 0 00.184-.185V9.006a.185.185 0 00-.184-.186h-2.12a.185.185 0 00-.184.185v1.888c0 .102.083.185.185.185m-2.964 0h2.119a.185.185 0 00.185-.185V9.006a.185.185 0 00-.184-.186h-2.12a.186.186 0 00-.186.186v1.887c0 .102.084.185.186.185m-2.92 0h2.12a.186.186 0 00.184-.185V9.006a.185.185 0 00-.184-.186h-2.12a.185.185 0 00-.184.185v1.888c0 .102.083.185.184.185m-2.964 0h2.12a.186.186 0 00.185-.185V9.006a.186.186 0 00-.185-.186h-2.12a.185.185 0 00-.184.185v1.888c0 .102.082.185.185.185M23.763 9.89c-.065-.051-.672-.51-1.954-.51-.338.001-.676.03-1.01.087-.248-1.7-1.653-2.53-1.716-2.566l-.344-.199-.226.327c-.284.438-.49.922-.612 1.43-.23.97-.09 1.882.403 2.661-.595.332-1.55.413-1.744.42H.751a.751.751 0 00-.75.748 11.376 11.376 0 00.692 4.062c.545 1.428 1.355 2.48 2.41 3.124 1.18.723 3.1 1.137 5.275 1.137.983.003 1.963-.086 2.93-.266a12.248 12.248 0 003.823-1.389c.98-.567 1.86-1.288 2.61-2.136 1.252-1.418 1.998-2.997 2.553-4.4h.221c1.372 0 2.215-.549 2.68-1.009.309-.293.55-.65.707-1.046l.098-.288z%22/%3E%3C/svg%3E";
 
 // Catégories AppFeed (CategoryList) -> nos groupes, par priorite
 // Plus le chiffre est bas, plus la categorie est prioritaire
@@ -1736,17 +1763,46 @@ function setAppfeedStatus(msg, state) {
 function buildAppfeedMaps(data) {
   appfeedImageMap = {};
   appfeedNameMap  = {};
+  appfeedIconMap  = {};
   if (!Array.isArray(data)) return;
   data.forEach(function(app) {
-    var cats = app.CategoryList || [];
-    if (!cats.length) return;
     var repo = (app.Repository || '').toLowerCase().split(':')[0];
     var name = (app.Name || '').toLowerCase();
-    // Stocke la CategoryList (tableau) pour chaque repo et nom
+    
+    // Extraction des icônes — indexé par repo complet, nom court, et nom app
+    if (app.Icon) {
+      if (repo) appfeedIconMap[repo] = app.Icon;
+      if (name) appfeedIconMap[name] = app.Icon;
+      // Nom court du repo (ex: "linuxserver/jellyfin" -> "jellyfin")
+      var repoShort = repo.split('/').pop();
+      if (repoShort && repoShort !== repo) appfeedIconMap[repoShort] = app.Icon;
+      // Nom normalisé sans tirets/underscores/espaces
+      var nameNorm = name.replace(/[-_\s]/g, '');
+      if (nameNorm && nameNorm !== name) appfeedIconMap[nameNorm] = app.Icon;
+    }
+
+    var cats = app.CategoryList || [];
+    if (!cats.length) return;
     if (repo) appfeedImageMap[repo] = cats;
     if (name) appfeedNameMap[name]  = cats;
   });
   appfeedReady = true;
+}
+
+// Fonction utilitaire pour récupérer l'URL d'une icône
+function getAppfeedIcon(name) {
+  if (!appfeedReady) return null;
+  var nameKey  = (name || '').toLowerCase();
+  var nameNorm = nameKey.replace(/[-_\s]/g, '');
+  // 1. Lookup direct par nom du conteneur
+  if (appfeedIconMap[nameKey])  return appfeedIconMap[nameKey];
+  if (appfeedIconMap[nameNorm]) return appfeedIconMap[nameNorm];
+  // 2. Lookup par image Docker (si importedImages est disponible)
+  var image    = importedImages[name] || '';
+  var imgKey   = image.toLowerCase().split(':')[0];
+  var imgShort = imgKey.split('/').pop();
+  var imgNorm  = imgShort.replace(/[-_\s]/g, '');
+  return appfeedIconMap[imgKey] || appfeedIconMap[imgShort] || appfeedIconMap[imgNorm] || null;
 }
 
 // ── IndexedDB cache (pas de limite de taille) ─────────────────
@@ -1802,6 +1858,10 @@ function loadAppfeed(forceRefresh) {
           var hours = Math.floor((age % 86400000) / 3600000);
           var age_str = days > 0 ? days + 'j' : hours + 'h';
           setAppfeedStatus(t('js_appfeed_cached')(data.length, age_str), 'ready');
+          
+          // Force update UI si des icônes sont prêtes pour les éléments existants
+          render();
+          renderPool();
           return;
         }
       }
@@ -1845,6 +1905,9 @@ function fetchAndCacheAppfeed() {
             setAppfeedStatus(t('js_appfeed_nocache')(result.data.length), 'ready');
           });
       }
+      // Force UI update to show icons if elements were already loaded
+      render();
+      renderPool();
     })
     .catch(function(err) {
       setAppfeedStatus(t('js_appfeed_err')(err.message), '');
