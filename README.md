@@ -21,6 +21,8 @@ Le problème : L'autostart natif d'Unraid lance tout en même temps. Résultat ?
 
 La solution : Une orchestration basée sur des vérifications d'état réelles (running) et une hiérarchie logique.
 
+Vous pouvez testé l'interface via [GitHub Pages](https://cbh17000.github.io/unraid-docker-startup-orchestrator/). Ou télécharger le fichier index.html pour une utilisation local.
+
 -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
 
 ## ✨ Points Forts
