@@ -1,4 +1,4 @@
-🐳 Unraid Docker Startup Orchestrator
+# 🐳 Unraid Docker Startup Orchestrator
 
 <p align="center">
 <img src="assets/interface.png" alt="Unraid Docker Startup Orchestrator Banner" width="800">
@@ -10,30 +10,36 @@
 <a href="https://www.docker.com/"><img src="https://img.shields.io/badge/Docker-2496ED?style=for-the-badge&logo=docker&logoColor=white" alt="Docker"></a>
 <a href="https://ko-fi.com/cbh17000"><img src="https://img.shields.io/badge/Support-Ko--fi-F16061?style=for-the-badge&logo=ko-fi&logoColor=white" alt="Support Ko-fi"></a>
 </p>
-🚀 Redonnez le contrôle à votre démarrage Docker
+
+-------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+
+##🚀 Redonnez le contrôle à votre démarrage Docker
 
 Unraid Docker Startup Orchestrator est une solution web élégante pour remplacer le démarrage désordonné d'Unraid par une séquence intelligente, journalisée et hautement configurable.
 
-    Le problème : L'autostart natif d'Unraid lance tout en même temps. Résultat ? Vos apps de téléchargement démarrent sans VPN, et vos sites web plantent car la base de données n'est pas encore prête.
+Le problème : L'autostart natif d'Unraid lance tout en même temps. Résultat ? Vos apps de téléchargement démarrent sans VPN, et vos sites web plantent car la base de données n'est pas encore prête.
 
-    La solution : Une orchestration basée sur des vérifications d'état réelles (running) et une hiérarchie logique.
+La solution : Une orchestration basée sur des vérifications d'état réelles (running) et une hiérarchie logique.
 
-✨ Points Forts
+-------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+
+## ✨ Points Forts
 
 Fonctionnalité et Description
 
-🔍 wait_for Intelligent,Vérifie via l'API Docker si le conteneur est réellement opérationnel avant de continuer.
+🔍 wait_for --> Intelligent,Vérifie via l'API Docker si le conteneur est réellement opérationnel avant de continuer.
 
-🛡️ Idempotence,Détection automatique des conteneurs déjà actifs pour éviter les erreurs de doublons.
+🛡️ Idempotence --> Détection automatique des conteneurs déjà actifs pour éviter les erreurs de doublons.
 
-📋 Logs de Production,Suivi en temps réel et historique dans /tmp/docker_start_order.log.
+📋 Logs de Production --> Suivi en temps réel et historique dans /tmp/docker_start_order.log.
 
-🌐 Intégration AppFeed,Récupère les icônes et infos directement depuis Community Applications.
+🌐 Intégration AppFeed --> Récupère les icônes et infos directement depuis Community Applications.
 
-🔒 100% Privé,Traitement local dans votre navigateur. Aucune donnée ne quitte votre réseau.
+🔒 100% Privé --> Traitement local dans votre navigateur. Aucune donnée ne quitte votre réseau.
 
+-------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
 
-🏗️ Logique de Démarrage
+## 🏗️ Logique de Démarrage
 
 Voici comment le script organise la survie de vos services après un redémarrage :
 Extrait de code
@@ -49,7 +55,9 @@ Extrait de code
         H --> I[Groupe 5: Médias & Téléchargement]
         I --> J[✅ Système Opérationnel]
 
-🛠️ Installation Rapide
+-------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+
+## 🛠️ Installation Rapide
 1. Générer le script
 
     Rendez-vous sur L'interface Web.
@@ -58,17 +66,13 @@ Extrait de code
 
     Cliquez sur Générer le script et copiez le code.
 
-2. Configuration dans Unraid
+   -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
 
-    Installez le plugin User Scripts via l'onglet Apps.
+    # <p align="center">⚠️ Important : Désactivez l'auto-start natif dans l'onglet Docker d'Unraid pour les conteneurs gérés par ce script.</p>
 
-    Créez un nouveau script nommé Docker_Orchestrator.
+   -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
 
-    Collez le code et réglez le déclencheur sur "At Startup of Array".
-
-    ⚠️ Important : Désactivez l'auto-start natif dans l'onglet Docker d'Unraid pour les conteneurs gérés par ce script.
-
-📊 Monitoring & Debug
+## 📊 Monitoring & Debug
 
 Vous pouvez surveiller le bon déroulement du script directement depuis votre terminal Unraid :
 Bash
@@ -76,7 +80,9 @@ Bash
     # Pour voir le démarrage en temps réel
     tail -f /tmp/docker_start_order.log
 
-💾 Structure de Sauvegarde (JSON)
+-------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+
+## 💾 Structure de Sauvegarde (JSON)
 
 L'outil vous permet d'exporter votre configuration. Voici à quoi ressemble un bloc de configuration type :
 JSON
@@ -89,7 +95,9 @@ JSON
       ]
     }
 
-🤝 Contribution & Support
+-------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+
+## 🤝 Contribution & Support
 
 Les idées sont les bienvenues ! N'hésitez pas à ouvrir une Issue ou une Pull Request.
 
