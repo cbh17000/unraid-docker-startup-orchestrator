@@ -1,0 +1,2339 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Unraid Docker Startup Orchestrator</title>
+<!--
+  Unraid Docker Startup Orchestrator
+  Copyright (c) 2026 cbh17000
+  Licence MIT — https://opensource.org/licenses/MIT
+
+  Permission is hereby granted, free of charge, to any person obtaining a copy
+  of this software to deal in the Software without restriction, including the
+  rights to use, copy, modify, merge, publish, distribute, sublicense, and/or
+  sell copies of the Software, subject to the above copyright notice appearing
+  in all copies or substantial portions of the Software.
+
+  THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND.
+-->
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;600;700&family=Syne:wght@400;600;800&display=swap');
+  :root {
+    --bg:#0d0f14;--surface:#13161e;--surface2:#1a1e2a;--border:#2a2f3f;
+    --accent:#f4731c;--accent2:#ff9a4d;--green:#3ddc84;--yellow:#ffd166;
+    --red:#ef476f;--blue:#4cc9f0;--text:#e2e6f0;--muted:#6b7394;
+    --mono:'JetBrains Mono',monospace;--sans:'Syne',sans-serif;
+  }
+  *{box-sizing:border-box;margin:0;padding:0}
+  body{background:var(--bg);color:var(--text);font-family:var(--sans);min-height:100vh;overflow-x:hidden}
+  body::before{content:'';position:fixed;inset:0;background-image:linear-gradient(rgba(244,115,28,.03) 1px,transparent 1px),linear-gradient(90deg,rgba(244,115,28,.03) 1px,transparent 1px);background-size:40px 40px;pointer-events:none;z-index:0}
+  .wrap{position:relative;z-index:1;max-width:980px;margin:0 auto;padding:40px 24px 80px}
+  header{margin-bottom:40px;border-bottom:1px solid var(--border);padding-bottom:28px}
+  .header-bottom{display:flex;align-items:center;justify-content:space-between;margin-top:6px}
+  .lang-select{background:var(--surface);border:1px solid var(--border);border-radius:5px;color:var(--muted);font-family:var(--mono);font-size:11px;padding:4px 8px;outline:none;cursor:pointer}
+  .lang-select:hover,.lang-select:focus{border-color:var(--accent);color:var(--text)}
+  .lang-select option{background:#1a1e2a}
+  .logo{display:flex;align-items:center;gap:12px;margin-bottom:6px}
+  .logo-icon{width:36px;height:36px;background:var(--accent);clip-path:polygon(50% 0%,100% 25%,100% 75%,50% 100%,0% 75%,0% 25%);display:flex;align-items:center;justify-content:center;font-size:16px}
+  h1{font-size:26px;font-weight:800;letter-spacing:-.5px}
+  h1 span{color:var(--accent)}
+  .subtitle{font-family:var(--mono);font-size:11px;color:var(--muted);margin-top:4px}
+  .section-title{font-size:10px;font-weight:600;letter-spacing:2px;text-transform:uppercase;color:var(--accent);margin-bottom:14px;display:flex;align-items:center;gap:8px}
+  .section-title::after{content:'';flex:1;height:1px;background:var(--border)}
+
+  /* ── Guide ── */
+  .guide{background:rgba(76,201,240,.05);border:1px solid rgba(76,201,240,.18);border-radius:8px;margin-bottom:28px;overflow:hidden}
+  .guide-header{display:flex;align-items:center;justify-content:space-between;padding:12px 16px;cursor:pointer;user-select:none;background:rgba(76,201,240,.07)}
+  .guide-header:hover{background:rgba(76,201,240,.11)}
+  .guide-title{font-family:var(--mono);font-size:11px;color:var(--blue);font-weight:600;letter-spacing:1px}
+  .guide-arrow{color:var(--blue);font-size:12px;transition:transform .2s}
+  .guide-arrow.open{transform:rotate(180deg)}
+  .guide-body{display:none;padding:16px;font-family:var(--mono);font-size:11px;color:#8ab4cc;line-height:1.9;border-top:1px solid rgba(76,201,240,.12)}
+  .guide-body.visible{display:block}
+  .guide-body h3{color:var(--blue);font-size:10px;letter-spacing:1.5px;text-transform:uppercase;margin:14px 0 6px;border-bottom:1px solid rgba(76,201,240,.15);padding-bottom:4px}
+  .guide-body h3:first-child{margin-top:0}
+  .guide-body .step{display:flex;gap:10px;margin-bottom:5px}
+  .guide-body .num{color:var(--accent);font-weight:700;flex-shrink:0;width:16px}
+  .guide-body code{background:rgba(244,115,28,.12);color:var(--accent2);padding:1px 5px;border-radius:3px;font-size:10px}
+  .guide-body .tag{display:inline-block;padding:1px 6px;border-radius:3px;font-size:10px;font-weight:700;margin-right:4px}
+  .tag-green{background:rgba(61,220,132,.15);color:var(--green)}
+  .tag-yellow{background:rgba(255,209,102,.15);color:var(--yellow)}
+  .tag-orange{background:rgba(244,115,28,.15);color:var(--accent)}
+
+  /* ── Import ── */
+  .import-box{background:var(--surface);border:1px solid var(--border);border-radius:8px;padding:18px;margin-bottom:28px}
+  .import-top{display:flex;align-items:flex-start;gap:14px}
+  .import-left{flex:1}
+  .import-cmd{font-family:var(--mono);font-size:11px;color:var(--muted);margin-bottom:8px}
+  .import-cmd code{background:rgba(244,115,28,.1);color:var(--accent2);padding:3px 8px;border-radius:4px;font-size:11px;user-select:all}
+  .btn-copy-cmd{background:none;border:1px solid var(--border);border-radius:4px;color:var(--muted);font-family:var(--mono);font-size:10px;padding:3px 8px;cursor:pointer;transition:all .15s;vertical-align:middle}
+  .btn-copy-cmd:hover{border-color:var(--accent);color:var(--accent)}
+  .btn-copy-cmd.copied{border-color:var(--green);color:var(--green)}
+  textarea#docker-paste{width:100%;height:100px;background:var(--bg);border:1px solid var(--border);border-radius:6px;padding:10px;color:var(--text);font-family:var(--mono);font-size:12px;outline:none;resize:vertical;line-height:1.6}
+  textarea#docker-paste:focus{border-color:var(--accent)}
+  textarea#docker-paste::placeholder{color:var(--muted)}
+  .btn-import{padding:10px 20px;background:rgba(244,115,28,.15);border:1px solid var(--accent);border-radius:6px;color:var(--accent);font-family:var(--sans);font-size:12px;font-weight:700;cursor:pointer;transition:all .2s;white-space:nowrap;margin-top:26px}
+  .btn-import:hover{background:var(--accent);color:#fff}
+  .import-status{font-family:var(--mono);font-size:11px;margin-top:8px;height:16px}
+  .import-status.ok{color:var(--green)}
+  .import-status.err{color:var(--red)}
+
+  /* ── Pool non assignés ── */
+  .pool-section{margin-bottom:28px}
+  .pool-box{background:var(--surface);border:1px dashed var(--border);border-radius:8px;min-height:52px;padding:10px 12px;display:flex;flex-wrap:wrap;gap:8px;align-items:flex-start}
+  .pool-box.drag-over{border-color:var(--accent);background:rgba(244,115,28,.04)}
+  .chip{display:inline-flex;align-items:center;gap:6px;background:var(--surface2);border:1px solid var(--border);border-radius:20px;padding:4px 10px 4px 8px;font-family:var(--mono);font-size:11px;color:var(--text);cursor:grab;user-select:none;transition:all .15s}
+  .chip:hover{border-color:var(--accent);color:var(--accent)}
+  .chip.dragging{opacity:.4}
+  .chip-handle{color:var(--muted);font-size:10px}
+  .pool-empty{font-family:var(--mono);font-size:11px;color:var(--muted);font-style:italic;padding:6px 4px}
+
+  /* ── Groups ── */
+  #groups-container{margin-bottom:28px}
+  .group-card{background:var(--surface);border:1px solid var(--border);border-left:3px solid var(--muted);border-radius:10px;margin-bottom:10px;overflow:hidden;transition:border-color .2s}
+  .group-card:nth-child(1){border-left-color:#f4731c}
+  .group-card:nth-child(2){border-left-color:#4cc9f0}
+  .group-card:nth-child(3){border-left-color:#3ddc84}
+  .group-card:nth-child(4){border-left-color:#ffd166}
+  .group-card:nth-child(5){border-left-color:#ef476f}
+  .group-card:nth-child(6){border-left-color:#c77dff}
+  .group-card:nth-child(n+7){border-left-color:var(--muted)}
+  .group-card.dragging{opacity:.4;border-style:dashed}
+  .group-card.drag-over-group{border-color:var(--accent);background:rgba(244,115,28,.04)}
+  .group-header{display:flex;align-items:center;gap:10px;padding:12px 14px;background:var(--surface2);border-bottom:1px solid var(--border);cursor:grab;user-select:none}
+  .drag-handle{color:var(--muted);font-size:14px;flex-shrink:0}
+  .group-name-input{flex:1;background:transparent;border:none;outline:none;font-family:var(--sans);font-size:14px;font-weight:600;color:var(--text)}
+  .group-actions{display:flex;gap:5px}
+  .btn-icon{background:none;border:1px solid var(--border);border-radius:5px;color:var(--muted);width:26px;height:26px;cursor:pointer;font-size:13px;display:flex;align-items:center;justify-content:center;transition:all .15s}
+  .btn-icon:hover{color:var(--text);border-color:#4a4f60}
+  .btn-icon.danger:hover{color:var(--red);border-color:var(--red)}
+  .group-body{padding:12px 14px}
+  .group-drop-zone{min-height:36px;border:1px dashed transparent;border-radius:5px;transition:all .2s;padding:4px}
+  .group-drop-zone.drag-over{border-color:var(--accent);background:rgba(244,115,28,.05)}
+  .drop-hint{font-family:var(--mono);font-size:10px;color:var(--muted);font-style:italic;text-align:center;padding:6px;display:none}
+  .group-drop-zone.empty .drop-hint{display:block}
+  .col-headers{display:grid;grid-template-columns:18px 1fr 80px 80px 44px 34px;gap:7px;margin-bottom:5px}
+  .lbl{font-family:var(--mono);font-size:10px;color:var(--muted);text-align:center}
+  .lbl.left{text-align:left;padding-left:2px}
+  .container-row{display:grid;grid-template-columns:18px 1fr 80px 80px 44px 34px;gap:7px;align-items:center;margin-bottom:6px;border-radius:4px;transition:outline .1s}
+  .container-row.dragging-row{opacity:.4}
+  .container-row.drag-over-row{outline:1px solid var(--accent)}
+  .input{background:var(--bg);border:1px solid var(--border);border-radius:5px;padding:6px 9px;color:var(--text);font-family:var(--mono);font-size:11px;outline:none;transition:border-color .15s;width:100%}
+  .input:focus{border-color:var(--accent)}
+  .input::placeholder{color:var(--muted)}
+  .input:disabled{opacity:.3}
+  .toggle-wrap{display:flex;align-items:center;justify-content:center}
+  .toggle{position:relative;width:34px;height:19px;cursor:pointer}
+  .toggle input{display:none}
+  .toggle-slider{position:absolute;inset:0;background:var(--border);border-radius:20px;transition:.2s}
+  .toggle-slider::before{content:'';position:absolute;width:13px;height:13px;left:3px;top:3px;background:var(--muted);border-radius:50%;transition:.2s}
+  .toggle input:checked+.toggle-slider{background:rgba(244,115,28,.3)}
+  .toggle input:checked+.toggle-slider::before{transform:translateX(15px);background:var(--accent)}
+  .btn-add-container{display:flex;align-items:center;gap:6px;font-family:var(--mono);font-size:10px;color:var(--muted);background:none;border:1px dashed var(--border);border-radius:5px;padding:6px 10px;cursor:pointer;width:100%;transition:all .15s;margin-top:4px}
+  .btn-add-container:hover{color:var(--accent);border-color:var(--accent);background:rgba(244,115,28,.04)}
+  .group-footer{display:flex;align-items:center;gap:10px;padding-top:10px;border-top:1px solid var(--border);margin-top:8px}
+  .group-footer label{font-family:var(--mono);font-size:10px;color:var(--muted);flex-shrink:0}
+  .input-sm{width:55px;background:var(--bg);border:1px solid var(--border);border-radius:5px;padding:4px 7px;color:var(--text);font-family:var(--mono);font-size:11px;outline:none;text-align:center}
+  .input-sm:focus{border-color:var(--accent)}
+
+  /* ── Templates ── */
+  .btn-copy-cmd{background:none;border:1px solid var(--border);border-radius:4px;color:var(--muted);font-family:var(--mono);font-size:10px;padding:2px 8px;cursor:pointer;transition:all .15s;vertical-align:middle;margin-left:6px}
+  .btn-copy-cmd:hover{border-color:var(--accent);color:var(--accent)}
+  .btn-copy-cmd.copied{border-color:var(--green);color:var(--green)}
+  /* ── Auto-classify ── */
+  .classify-bar{margin-top:12px;padding-top:12px;border-top:1px solid var(--border)}
+  .btn-classify{width:100%;padding:9px;background:rgba(61,220,132,.1);border:1px solid var(--green);border-radius:6px;color:var(--green);font-family:var(--mono);font-size:11px;font-weight:700;cursor:pointer;transition:all .2s;display:flex;align-items:center;justify-content:center;gap:8px}
+  .btn-classify:hover{background:rgba(61,220,132,.2)}
+  .config-bar{display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin-bottom:4px}
+  .config-bar button, .btn-like{background:var(--surface2);border:1px solid var(--border);color:var(--fg);padding:6px 14px;border-radius:6px;font-size:13px;cursor:pointer;font-family:var(--sans)}
+  .config-bar button:hover, .btn-like:hover{background:var(--accent);color:#fff;border-color:var(--accent)}
+  .btn-like{display:inline-flex;align-items:center;gap:6px;user-select:none}
+  #config-status{font-size:12px;color:var(--muted);font-style:italic}
+    .classify-result{font-family:var(--mono);font-size:10px;color:var(--muted);margin-top:8px;line-height:1.7;display:none}
+  .classify-result.visible{display:block}
+  .cr-group{color:var(--accent);font-weight:700}
+  .cr-ok{color:var(--green)}
+  .cr-skip{color:var(--muted)}
+  .tpl-bar{display:flex;align-items:center;gap:10px;margin-bottom:10px;flex-wrap:wrap}
+  .tpl-select{background:var(--surface);border:1px solid var(--border);border-radius:6px;color:var(--text);font-family:var(--mono);font-size:11px;padding:7px 10px;outline:none;cursor:pointer;flex:1;min-width:200px;appearance:none;background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='6'%3E%3Cpath d='M0 0l5 6 5-6z' fill='%236b7394'/%3E%3C/svg%3E");background-repeat:no-repeat;background-position:right 10px center}
+  .tpl-select:focus{border-color:var(--accent)}
+  .tpl-select option{background:#1a1e2a;color:var(--text)}
+  .tpl-select optgroup{background:#13161e;color:var(--accent);font-weight:700}
+  .btn-tpl-add{padding:7px 16px;background:rgba(244,115,28,.12);border:1px solid var(--accent);border-radius:6px;color:var(--accent);font-family:var(--mono);font-size:11px;font-weight:700;cursor:pointer;transition:all .2s;white-space:nowrap;flex-shrink:0}
+  .btn-tpl-add:hover{background:var(--accent);color:#fff}
+  .btn-tpl-add:disabled{opacity:.4;cursor:default}
+  .tpl-desc{font-family:var(--mono);font-size:10px;color:var(--muted);padding:6px 10px;background:var(--surface);border:1px solid var(--border);border-radius:5px;line-height:1.6;display:none}
+  .tpl-desc.visible{display:block}
+  .groups-locked{opacity:.35;pointer-events:none;user-select:none}
+  .lock-notice{font-family:var(--mono);font-size:11px;color:var(--muted);text-align:center;padding:18px;border:1px dashed var(--border);border-radius:8px;margin-bottom:10px;display:none}
+  .lock-notice.visible{display:block}
+  .btn-add-group{display:flex;align-items:center;justify-content:center;gap:8px;width:100%;padding:13px;background:none;border:1px dashed rgba(244,115,28,.3);border-radius:8px;color:var(--accent);font-family:var(--sans);font-size:12px;font-weight:600;cursor:pointer;transition:all .2s;margin-bottom:36px}
+  .btn-add-group:hover{background:rgba(244,115,28,.07);border-color:var(--accent)}
+  .btn-generate{width:100%;padding:15px;background:var(--accent);border:none;border-radius:8px;color:#fff;font-family:var(--sans);font-size:14px;font-weight:700;cursor:pointer;letter-spacing:.5px;transition:all .2s;margin-bottom:22px;display:flex;align-items:center;justify-content:center;gap:8px}
+  .btn-generate:hover{background:var(--accent2);transform:translateY(-1px);box-shadow:0 8px 24px rgba(244,115,28,.3)}
+  #output-section{display:none}
+  .output-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:10px}
+  .btn-copy{display:flex;align-items:center;gap:6px;background:var(--surface2);border:1px solid var(--border);border-radius:5px;color:var(--text);font-family:var(--mono);font-size:11px;padding:6px 12px;cursor:pointer;transition:all .15s}
+  .btn-copy:hover,.btn-copy.copied{border-color:var(--green);color:var(--green)}
+  #script-output{background:#090b10;border:1px solid var(--border);border-radius:8px;padding:18px;font-family:var(--mono);font-size:11px;line-height:1.7;white-space:pre;overflow-x:auto;color:#c8d0e8;max-height:560px;overflow-y:auto}
+  .sh-comment{color:#4a5568}.sh-func{color:#4cc9f0}
+  ::-webkit-scrollbar{width:5px;height:5px}::-webkit-scrollbar-track{background:var(--bg)}::-webkit-scrollbar-thumb{background:var(--border);border-radius:3px}
+  /* AppFeed */
+  .appfeed-bar{display:flex;align-items:center;gap:8px;padding:6px 10px;background:rgba(61,220,132,.06);border:1px solid rgba(61,220,132,.2);border-radius:6px;font-size:11px;margin-bottom:10px}
+  .appfeed-dot{width:8px;height:8px;border-radius:50%;background:#e74c3c;flex-shrink:0}
+  .appfeed-dot.ready{background:var(--green)}
+  .appfeed-dot.loading{background:#f39c12;animation:pulse 1s infinite}
+  @keyframes pulse{0%,100%{opacity:1}50%{opacity:.3}}
+  .appfeed-text{color:var(--muted);flex:1}
+  .btn-appfeed-refresh{background:none;border:1px solid var(--border);border-radius:3px;color:var(--muted);font-size:10px;padding:2px 6px;cursor:pointer}
+  .btn-appfeed-refresh:hover{border-color:var(--green);color:var(--green)}
+</style>
+</head>
+<body>
+<div class="wrap">
+
+<header>
+  <div class="logo">
+    <div class="logo-icon">&#x2B21;</div>
+    <h1>Unraid <span>Docker Startup</span> Orchestrator</h1>
+  </div>
+  <div class="header-bottom">
+    <div class="subtitle" data-i18n="subtitle">// Générateur de script UserScript — ordre de démarrage des conteneurs</div>
+    <select id="lang-select" class="lang-select" title="Language">
+      <option value="fr">🇫🇷 Français</option>
+      <option value="en">🇬🇧 English</option>
+      <option value="es">🇪🇸 Español</option>
+      <option value="de">🇩🇪 Deutsch</option>
+    </select>
+  </div>
+</header>
+
+<!-- GUIDE -->
+<div class="guide">
+  <div class="guide-header" id="guide-toggle">
+    <span class="guide-title"><span data-i18n="guide_title">&#9432; GUIDE D'UTILISATION</span></span>
+    <span class="guide-arrow" id="guide-arrow">&#9660;</span>
+  </div>
+  <div class="guide-body" id="guide-body">
+</div></div>
+
+<!-- IMPORT -->
+<div class="section-title" data-i18n="section_import">Import docker ps</div>
+<div class="import-box">
+  <div class="import-top">
+    <div class="import-left">
+      <div class="import-cmd"><span data-i18n="ssh_cmd_label">Commande SSH :</span> <code id="ssh-cmd">docker ps -a --format '{{.Names}}\t{{.Image}}'</code> <button class="btn-copy-cmd" id="btn-copy-cmd" title="Copier la commande"><span data-i18n="btn_copy_cmd">&#10697; Copier</span></button></div>
+      <textarea id="docker-paste" placeholder="Collez ici le résultat de la commande docker ps..." data-i18n-placeholder="placeholder_paste"></textarea>
+      <div class="import-status" id="import-status"></div>
+      <div class="appfeed-bar" id="appfeed-bar">
+        <div class="appfeed-dot" id="appfeed-dot"></div>
+        <span class="appfeed-text" id="appfeed-text">AppFeed : non charge</span>
+        <button class="btn-appfeed-refresh" id="btn-appfeed-refresh"><span data-i18n="btn_appfeed_refresh">&#8635; Mettre à jour</span></button><button class="btn-appfeed-refresh" id="btn-appfeed-clear" title="Vider le cache IndexedDB" style="margin-left:6px;opacity:0.6"><span data-i18n="btn_appfeed_clear">&#128465; Vider cache</span></button>
+      </div>
+      <div class="classify-bar">
+        <button class="btn-classify" id="btn-classify" disabled><span data-i18n="btn_classify">&#9889; Classifier automatiquement et créer les groupes</span></button>
+        <div class="classify-result" id="classify-result"></div>
+      </div>
+    </div>
+    <button class="btn-import" id="btn-import"><span data-i18n="btn_import">Importer</span></button>
+  </div>
+</div>
+
+
+<!-- POOL -->
+<div class="pool-section">
+  <div class="section-title" data-i18n="section_pool">Conteneurs non assignés</div>
+  <div class="pool-box" id="pool-box">
+    <span class="pool-empty" id="pool-empty">Aucun conteneur — utilisez l'import ci-dessus ou ajoutez manuellement dans un groupe.</span>
+  </div>
+</div>
+
+<!-- GROUPS -->
+<div class="section-title" data-i18n="section_groups">Groupes &amp; ordre de démarrage</div>
+<div id="groups-wrapper" class="groups-locked">
+<div class="lock-notice visible" id="lock-notice">&#128274; Importez vos conteneurs via la commande <code>docker ps</code> ci-dessus avant de creer des groupes.</div>
+<div id="groups-container"></div>
+
+<div class="tpl-bar">
+  <select class="tpl-select" id="tpl-select">
+    <option value="" data-i18n-opt="tpl_choose">-- Choisir un modele de groupe --</option>
+    <optgroup label="Infrastructures réseau">
+      <option value="vpn">VPN / Accès réseau</option>
+      <option value="dns">DNS &amp; AdBlock</option>
+      <option value="proxy">Proxy inverse &amp; SSL</option>
+    </optgroup>
+    <optgroup label="Services web">
+      <option value="databases">Bases de données</option>
+      <option value="webapps">Applications web</option>
+      <option value="monitoring">Monitoring &amp; Dashboard</option>
+    </optgroup>
+    <optgroup label="Médias">
+      <option value="media_server">Serveurs média</option>
+      <option value="media_dl">Téléchargement</option>
+      <option value="media_manage">Gestion des médias</option>
+    </optgroup>
+    <optgroup label="Domotique &amp; Divers">
+      <option value="homeauto">Domotique</option>
+      <option value="documents">Documents &amp; Fichiers</option>
+      <option value="games">Jeux &amp; Gaming</option>
+      <option value="dev">Developpement</option>
+      <option value="backup">Sauvegarde &amp; Sync</option>
+      <option value="empty">Groupe vide (personnalise)</option>
+    </optgroup>
+  </select>
+  <button class="btn-tpl-add" id="btn-tpl-add"><span data-i18n="btn_tpl_add">+ Ajouter ce groupe</span></button>
+</div>
+<div class="tpl-desc" id="tpl-desc"></div>
+<div style="height:8px"></div>
+<button class="btn-add-group" id="btn-add-group"><span data-i18n="btn_add_group">+ Ajouter un groupe vide</span></button>
+</div><!-- /groups-wrapper -->
+
+<!-- CONFIG -->
+<div class="section-title" data-i18n="section_config">Configuration</div>
+<div class="config-bar">
+  <button id="btn-export" onclick="exportConfig()">⬇ <span data-i18n="btn_export">Exporter</span></button>
+  <label class="btn-like" id="btn-import-label">
+    ⬆ <span data-i18n="btn_import_config">Importer</span>
+    <input type="file" id="import-config-file" accept=".json" style="display:none" onchange="importConfig(event)">
+  </label>
+  <span id="config-status"></span>
+</div>
+
+<!-- GENERATE -->
+<div class="section-title" data-i18n="section_generate">Générer</div>
+<button class="btn-generate" id="btn-generate"><span data-i18n="btn_generate">Générer le script bash</span></button>
+
+<div id="output-section">
+  <div class="output-header">
+    <div class="section-title" style="margin-bottom:0"><span data-i18n="section_output">Script généré</span></div>
+    <button class="btn-copy" id="copy-btn"><span data-i18n="btn_copy_script">Copier</span></button>
+  </div>
+  <div id="script-output"></div>
+</div>
+
+</div><!-- /wrap -->
+
+<script>
+
+// ═══════════════════════════════════════════════════════════════
+// i18n — Système multilingue
+// ═══════════════════════════════════════════════════════════════
+var TRANSLATIONS = {
+  fr: {
+    subtitle:           "// Generateur de script UserScript — ordre de demarrage des conteneurs",
+    section_import:     "Import docker ps",
+    section_pool:       "Conteneurs non assignes",
+    section_groups:     "Groupes & ordre de demarrage",
+    section_generate:   "Generer",
+    section_output:     "Script genere",
+    ssh_cmd_label:      "Commande SSH :",
+    btn_copy_cmd:       "Copier",
+    btn_import:         "Importer",
+    btn_appfeed_refresh:"Mettre a jour",
+    btn_appfeed_clear:  "Vider cache",
+    btn_classify:       "Classifier automatiquement et creer les groupes",
+    btn_tpl_add:        "+ Ajouter ce groupe",
+    btn_add_group:      "+ Ajouter un groupe vide",
+    btn_generate:       "Generer le script bash",
+    btn_copy_script:    "Copier",
+    col_container:      "Conteneur",
+    col_timeout:        "Timeout(s)",
+    col_active:         "actif",
+    guide_title:        "GUIDE D'UTILISATION",
+    placeholder_paste:  "Collez ici le resultat de la commande docker ps...",
+    js_added:           function(n) { return "Import OK — " + n + " conteneur(s) ajoute(s) dans la zone non assignes."; },
+    js_no_name:         "Aucun nom detecte.",
+    js_all_assigned:    "Tous les conteneurs sont assignes.",
+    js_group_empty:     "Groupe vide — renommez-le et assignez vos conteneurs.",
+    js_pause_label:     "Pause apres ce groupe :",
+    js_add_container:   "+ ajouter un conteneur",
+    js_classify_done:   "Classification terminee :",
+    js_appfeed_warn:    "AppFeed pas encore charge — classification par regles integrees uniquement.\nAttendez le message vert AppFeed puis reclassifiez.",
+    js_appfeed_count:   function(af, r) { return "AppFeed : " + af + " | Regles integrees : " + r; },
+    js_appfeed_norules: function(r) { return "AppFeed non charge — " + r + " via regles uniquement"; },
+    js_copy_ok:         "Copie !",
+    js_copy_btn:        "Copier",
+    js_copy_fail:       "Copie automatique indisponible en HTTP.\nSelectionnez le script et copiez manuellement (Ctrl+A puis Ctrl+C).",
+    js_tpl_choose:      "-- Choisir un modele de groupe --",
+    js_tpl_add_btn:     "+ Ajouter ce groupe",
+    js_add_group:       "+ Ajouter un groupe",
+    js_no_containers:   "Aucun conteneur — utilisez l'import ci-dessus ou ajoutez manuellement dans un groupe.",
+    js_pool_empty:      "Tous les conteneurs sont assignes.",
+    js_drop_hint:       "Deposez ici",
+    js_unclassified:    "Non classes",
+    js_appfeed_local:   function(n) { return n + " apps — fichier local (applicationFeed-raw.json)"; },
+    js_appfeed_github:  function(n) { return n + " apps — GitHub (cache IndexedDB 7j)"; },
+    js_appfeed_nocache: function(n) { return n + " apps — GitHub (sans cache)"; },
+    js_appfeed_cached:  function(n, a) { return n + " apps — IndexedDB (" + a + " / 7j)"; },
+    js_appfeed_init:    "AppFeed : non charge",
+    js_appfeed_search:  "recherche fichier local...",
+    js_appfeed_dl:      "fichier local absent — telechargement GitHub...",
+    js_appfeed_err:     function(e) { return "indisponible — regles integrees utilisees (" + e + ")"; },
+    js_cache_clear:     "cache vide — rechargement...",
+    js_cache_err:       "erreur suppression cache",
+    js_appfeed_ready:   "AppFeed pret — classification enrichie",
+    js_appfeed_notready:"Attente chargement AppFeed...",
+    guide_step1:        "Etape 1 — Importer vos conteneurs",
+    guide_step2:        "Etape 2 — Organiser les groupes",
+    guide_step3:        "Etape 3 — Assigner les conteneurs",
+    guide_step4:        "Etape 4 — Configurer wait_for et les delais",
+    section_config: "Configuration",
+    btn_export: "Exporter la config",
+    btn_import_config: "Importer une config",
+    js_export_ok: "Configuration exportee.",
+    js_import_confirm: "Des groupes existent deja. Remplacer la configuration actuelle ?",
+    js_import_ok: function(n) { return "Import OK — " + n + " groupe(s) charges."; },
+    js_import_err: function(e) { return "Erreur import : " + e; },
+    guide_step5:        "Etape 5 — Generer et installer",
+    js_script_title:    "# Unraid - Demarrage ordonne des conteneurs Docker",
+    js_script_generated:function(d) { return "# Genere le " + d + " via Unraid Docker Script Generator"; },
+    js_script_trigger:  "# Declencheur : \"At Startup of Array\" dans User Scripts",
+    js_script_start_log:"echo \"$(date) - === Demarrage ===" + " \" > \"$LOG\"",
+    js_script_wait_log: "    echo \"$(date) - Attente : $name (max ${timeout}s)\" | tee -a \"$LOG\"",
+    js_script_end_log:  "echo \"$(date) - === Sequence terminee ===" + " \" | tee -a \"$LOG\"",
+    js_script_disabled: "# DESACTIVE : ",
+  },
+  en: {
+    subtitle:           "// UserScript generator — container startup order",
+    section_import:     "Import docker ps",
+    section_pool:       "Unassigned containers",
+    section_groups:     "Groups & startup order",
+    section_generate:   "Generate",
+    section_output:     "Generated script",
+    ssh_cmd_label:      "SSH command:",
+    btn_copy_cmd:       "Copy",
+    btn_import:         "Import",
+    btn_appfeed_refresh:"Refresh",
+    btn_appfeed_clear:  "Clear cache",
+    btn_classify:       "Auto-classify and create groups",
+    btn_tpl_add:        "+ Add this group",
+    btn_add_group:      "+ Add empty group",
+    btn_generate:       "Generate bash script",
+    btn_copy_script:    "Copy",
+    col_container:      "Container",
+    col_timeout:        "Timeout(s)",
+    col_active:         "active",
+    guide_title:        "HOW TO USE",
+    placeholder_paste:  "Paste the result of docker ps here...",
+    js_added:           function(n) { return "Import OK — " + n + " container(s) added to the unassigned pool."; },
+    js_no_name:         "No name detected.",
+    js_all_assigned:    "All containers are assigned.",
+    js_group_empty:     "Empty group — rename it and assign your containers.",
+    js_pause_label:     "Pause after this group:",
+    js_add_container:   "+ add container",
+    js_classify_done:   "Classification complete:",
+    js_appfeed_warn:    "AppFeed not yet loaded — using built-in rules only.\nWait for the green AppFeed indicator then re-classify.",
+    js_appfeed_count:   function(af, r) { return "AppFeed: " + af + " | Built-in rules: " + r; },
+    js_appfeed_norules: function(r) { return "AppFeed not loaded — " + r + " via built-in rules only"; },
+    js_copy_ok:         "Copied!",
+    js_copy_btn:        "Copy",
+    js_copy_fail:       "Auto-copy unavailable over HTTP.\nSelect the script and copy manually (Ctrl+A then Ctrl+C).",
+    js_tpl_choose:      "-- Choose a group template --",
+    js_tpl_add_btn:     "+ Add this group",
+    js_add_group:       "+ Add group",
+    js_no_containers:   "No containers — use the import above or add manually to a group.",
+    js_pool_empty:      "All containers are assigned.",
+    js_drop_hint:       "Drop here",
+    js_unclassified:    "Unclassified",
+    js_appfeed_local:   function(n) { return n + " apps — local file (applicationFeed-raw.json)"; },
+    js_appfeed_github:  function(n) { return n + " apps — GitHub (IndexedDB cache 7d)"; },
+    js_appfeed_nocache: function(n) { return n + " apps — GitHub (no cache)"; },
+    js_appfeed_cached:  function(n, a) { return n + " apps — IndexedDB (" + a + " / 7d)"; },
+    js_appfeed_init:    "AppFeed: not loaded",
+    js_appfeed_search:  "looking for local file...",
+    js_appfeed_dl:      "local file not found — downloading from GitHub...",
+    js_appfeed_err:     function(e) { return "unavailable — built-in rules used (" + e + ")"; },
+    js_cache_clear:     "cache cleared — reloading...",
+    js_cache_err:       "error clearing cache",
+    js_appfeed_ready:   "AppFeed ready — enhanced classification",
+    js_appfeed_notready:"Waiting for AppFeed to load...",
+    guide_step1:        "Step 1 — Import your containers",
+    guide_step2:        "Step 2 — Organize groups",
+    guide_step3:        "Step 3 — Assign containers",
+    guide_step4:        "Step 4 — Configure wait_for and delays",
+    section_config: "Configuration",
+    btn_export: "Export config",
+    btn_import_config: "Import config",
+    js_export_ok: "Configuration exported.",
+    js_import_confirm: "Groups already exist. Replace the current configuration?",
+    js_import_ok: function(n) { return "Import OK — " + n + " group(s) loaded."; },
+    js_import_err: function(e) { return "Import error: " + e; },
+    guide_step5:        "Step 5 — Generate and install",
+    js_script_title:    "# Unraid - Ordered Docker container startup",
+    js_script_generated:function(d) { return "# Generated on " + d + " via Unraid Docker Script Generator"; },
+    js_script_trigger:  "# Trigger: \"At Startup of Array\" in User Scripts",
+    js_script_start_log:"echo \"$(date) - === Starting ===" + " \" > \"$LOG\"",
+    js_script_wait_log: "    echo \"$(date) - Waiting: $name (max ${timeout}s)\" | tee -a \"$LOG\"",
+    js_script_end_log:  "echo \"$(date) - === Sequence complete ===" + " \" | tee -a \"$LOG\"",
+    js_script_disabled: "# DISABLED: ",
+  },
+  es: {
+    subtitle:           "// Generador de UserScript — orden de inicio de contenedores",
+    section_import:     "Importar docker ps",
+    section_pool:       "Contenedores no asignados",
+    section_groups:     "Grupos & orden de inicio",
+    section_generate:   "Generar",
+    section_output:     "Script generado",
+    ssh_cmd_label:      "Comando SSH:",
+    btn_copy_cmd:       "Copiar",
+    btn_import:         "Importar",
+    btn_appfeed_refresh:"Actualizar",
+    btn_appfeed_clear:  "Limpiar cache",
+    btn_classify:       "Clasificar automaticamente y crear grupos",
+    btn_tpl_add:        "+ Anadir este grupo",
+    btn_add_group:      "+ Anadir grupo vacio",
+    btn_generate:       "Generar script bash",
+    btn_copy_script:    "Copiar",
+    col_container:      "Contenedor",
+    col_timeout:        "Timeout(s)",
+    col_active:         "activo",
+    guide_title:        "GUIA DE USO",
+    placeholder_paste:  "Pega aqui el resultado de docker ps...",
+    js_added:           function(n) { return "Importacion OK — " + n + " contenedor(es) anadido(s) al area no asignada."; },
+    js_no_name:         "No se detecto ningun nombre.",
+    js_all_assigned:    "Todos los contenedores estan asignados.",
+    js_group_empty:     "Grupo vacio — renombralo y asigna tus contenedores.",
+    js_pause_label:     "Pausa despues de este grupo:",
+    js_add_container:   "+ anadir contenedor",
+    js_classify_done:   "Clasificacion completada:",
+    js_appfeed_warn:    "AppFeed aun no cargado — usando solo reglas integradas.\nEspera el indicador verde de AppFeed y vuelve a clasificar.",
+    js_appfeed_count:   function(af, r) { return "AppFeed: " + af + " | Reglas integradas: " + r; },
+    js_appfeed_norules: function(r) { return "AppFeed no cargado — " + r + " via reglas integradas"; },
+    js_copy_ok:         "Copiado!",
+    js_copy_btn:        "Copiar",
+    js_copy_fail:       "Copia automatica no disponible en HTTP.\nSelecciona el script y copialo manualmente (Ctrl+A luego Ctrl+C).",
+    js_tpl_choose:      "-- Elegir una plantilla de grupo --",
+    js_tpl_add_btn:     "+ Anadir este grupo",
+    js_add_group:       "+ Anadir grupo",
+    js_no_containers:   "Sin contenedores — usa la importacion o anade manualmente a un grupo.",
+    js_pool_empty:      "Todos los contenedores estan asignados.",
+    js_drop_hint:       "Suelta aqui",
+    js_unclassified:    "Sin clasificar",
+    js_appfeed_local:   function(n) { return n + " apps — archivo local (applicationFeed-raw.json)"; },
+    js_appfeed_github:  function(n) { return n + " apps — GitHub (cache IndexedDB 7d)"; },
+    js_appfeed_nocache: function(n) { return n + " apps — GitHub (sin cache)"; },
+    js_appfeed_cached:  function(n, a) { return n + " apps — IndexedDB (" + a + " / 7d)"; },
+    js_appfeed_init:    "AppFeed: no cargado",
+    js_appfeed_search:  "buscando archivo local...",
+    js_appfeed_dl:      "archivo local no encontrado — descargando de GitHub...",
+    js_appfeed_err:     function(e) { return "no disponible — reglas integradas usadas (" + e + ")"; },
+    js_cache_clear:     "cache borrado — recargando...",
+    js_cache_err:       "error al borrar cache",
+    js_appfeed_ready:   "AppFeed listo — clasificacion mejorada",
+    js_appfeed_notready:"Esperando la carga de AppFeed...",
+    guide_step1:        "Paso 1 — Importar contenedores",
+    guide_step2:        "Paso 2 — Organizar grupos",
+    guide_step3:        "Paso 3 — Asignar contenedores",
+    guide_step4:        "Paso 4 — Configurar wait_for y retardos",
+    section_config: "Configuracion",
+    btn_export: "Exportar config",
+    btn_import_config: "Importar config",
+    js_export_ok: "Configuracion exportada.",
+    js_import_confirm: "Ya existen grupos. Reemplazar la configuracion actual?",
+    js_import_ok: function(n) { return "Import OK — " + n + " grupo(s) cargado(s)."; },
+    js_import_err: function(e) { return "Error de importacion: " + e; },
+    guide_step5:        "Paso 5 — Generar e instalar",
+    js_script_title:    "# Unraid - Inicio ordenado de contenedores Docker",
+    js_script_generated:function(d) { return "# Generado el " + d + " via Unraid Docker Script Generator"; },
+    js_script_trigger:  "# Disparador: \"At Startup of Array\" en User Scripts",
+    js_script_start_log:"echo \"$(date) - === Iniciando ===" + " \" > \"$LOG\"",
+    js_script_wait_log: "    echo \"$(date) - Esperando: $name (max ${timeout}s)\" | tee -a \"$LOG\"",
+    js_script_end_log:  "echo \"$(date) - === Secuencia completada ===" + " \" | tee -a \"$LOG\"",
+    js_script_disabled: "# DESACTIVADO: ",
+  },
+  de: {
+    subtitle:           "// UserScript-Generator — Startreihenfolge der Container",
+    section_import:     "Docker ps importieren",
+    section_pool:       "Nicht zugewiesene Container",
+    section_groups:     "Gruppen & Startreihenfolge",
+    section_generate:   "Generieren",
+    section_output:     "Generiertes Skript",
+    ssh_cmd_label:      "SSH-Befehl:",
+    btn_copy_cmd:       "Kopieren",
+    btn_import:         "Importieren",
+    btn_appfeed_refresh:"Aktualisieren",
+    btn_appfeed_clear:  "Cache leeren",
+    btn_classify:       "Automatisch klassifizieren und Gruppen erstellen",
+    btn_tpl_add:        "+ Diese Gruppe hinzufuegen",
+    btn_add_group:      "+ Leere Gruppe hinzufuegen",
+    btn_generate:       "Bash-Skript generieren",
+    btn_copy_script:    "Kopieren",
+    col_container:      "Container",
+    col_timeout:        "Timeout(s)",
+    col_active:         "aktiv",
+    guide_title:        "ANLEITUNG",
+    placeholder_paste:  "Fuege hier das Ergebnis von docker ps ein...",
+    js_added:           function(n) { return "Import OK — " + n + " Container zur nicht zugewiesenen Zone hinzugefuegt."; },
+    js_no_name:         "Kein Name erkannt.",
+    js_all_assigned:    "Alle Container sind zugewiesen.",
+    js_group_empty:     "Leere Gruppe — umbenennen und Container zuweisen.",
+    js_pause_label:     "Pause nach dieser Gruppe:",
+    js_add_container:   "+ Container hinzufuegen",
+    js_classify_done:   "Klassifizierung abgeschlossen:",
+    js_appfeed_warn:    "AppFeed noch nicht geladen — nur integrierte Regeln werden verwendet.\nWarte auf den gruenen AppFeed-Indikator und klassifiziere erneut.",
+    js_appfeed_count:   function(af, r) { return "AppFeed: " + af + " | Integrierte Regeln: " + r; },
+    js_appfeed_norules: function(r) { return "AppFeed nicht geladen — " + r + " ueber integrierte Regeln"; },
+    js_copy_ok:         "Kopiert!",
+    js_copy_btn:        "Kopieren",
+    js_copy_fail:       "Automatisches Kopieren ueber HTTP nicht verfuegbar.\nSkript auswaehlen und manuell kopieren (Strg+A dann Strg+C).",
+    js_tpl_choose:      "-- Gruppenvorlage auswaehlen --",
+    js_tpl_add_btn:     "+ Diese Gruppe hinzufuegen",
+    js_add_group:       "+ Gruppe hinzufuegen",
+    js_no_containers:   "Keine Container — Import verwenden oder manuell zu einer Gruppe hinzufuegen.",
+    js_pool_empty:      "Alle Container sind zugewiesen.",
+    js_drop_hint:       "Hier ablegen",
+    js_unclassified:    "Nicht klassifiziert",
+    js_appfeed_local:   function(n) { return n + " Apps — lokale Datei (applicationFeed-raw.json)"; },
+    js_appfeed_github:  function(n) { return n + " Apps — GitHub (IndexedDB-Cache 7T)"; },
+    js_appfeed_nocache: function(n) { return n + " Apps — GitHub (kein Cache)"; },
+    js_appfeed_cached:  function(n, a) { return n + " Apps — IndexedDB (" + a + " / 7T)"; },
+    js_appfeed_init:    "AppFeed: nicht geladen",
+    js_appfeed_search:  "lokale Datei wird gesucht...",
+    js_appfeed_dl:      "lokale Datei nicht gefunden — lade von GitHub...",
+    js_appfeed_err:     function(e) { return "nicht verfuegbar — integrierte Regeln verwendet (" + e + ")"; },
+    js_cache_clear:     "Cache geleert — lade neu...",
+    js_cache_err:       "Fehler beim Leeren des Caches",
+    js_appfeed_ready:   "AppFeed bereit — erweiterte Klassifizierung",
+    js_appfeed_notready:"Warte auf AppFeed-Laden...",
+    guide_step1:        "Schritt 1 — Container importieren",
+    guide_step2:        "Schritt 2 — Gruppen organisieren",
+    guide_step3:        "Schritt 3 — Container zuweisen",
+    guide_step4:        "Schritt 4 — wait_for und Verzoegerungen konfigurieren",
+    section_config: "Konfiguration",
+    btn_export: "Konfig exportieren",
+    btn_import_config: "Konfig importieren",
+    js_export_ok: "Konfiguration exportiert.",
+    js_import_confirm: "Gruppen existieren bereits. Aktuelle Konfiguration ersetzen?",
+    js_import_ok: function(n) { return "Import OK — " + n + " Gruppe(n) geladen."; },
+    js_import_err: function(e) { return "Importfehler: " + e; },
+    guide_step5:        "Schritt 5 — Generieren und installieren",
+    js_script_title:    "# Unraid - Geordneter Docker-Container-Start",
+    js_script_generated:function(d) { return "# Generiert am " + d + " via Unraid Docker Script Generator"; },
+    js_script_trigger:  "# Ausloser: \"At Startup of Array\" in User Scripts",
+    js_script_start_log:"echo \"$(date) - === Starte ===" + " \" > \"$LOG\"",
+    js_script_wait_log: "    echo \"$(date) - Warte auf: $name (max ${timeout}s)\" | tee -a \"$LOG\"",
+    js_script_end_log:  "echo \"$(date) - === Sequenz abgeschlossen ===" + " \" | tee -a \"$LOG\"",
+    js_script_disabled: "# DEAKTIVIERT: ",
+  }
+};
+
+var currentLang = localStorage.getItem('dsm-lang') || 'fr';
+
+function t(key) {
+  var lang = TRANSLATIONS[currentLang] || TRANSLATIONS['fr'];
+  return lang[key] || TRANSLATIONS['fr'][key] || key;
+}
+
+
+// ── Guide content (multilingual) ─────────────────────────────
+var GUIDE_CONTENT = {
+  fr: [
+    { title: "Étape 1 — Importer vos conteneurs", steps: [
+      "Connectez-vous en SSH sur votre Unraid.",
+      "Exécutez la commande : <code>docker ps -a --format '{{.Names}}\t{{.Image}}'</code>",
+      "Copiez le résultat (une ligne = nom + image séparée par une tabulation) et collez-le dans la zone <strong>Import</strong> ci-dessous.",
+      "Cliquez sur <strong>Importer</strong>. Tous vos conteneurs apparaissent dans la <strong>zone non assignés</strong> sous forme de pastilles."
+    ]},
+    { title: "Étape 2 — Organiser les groupes", steps: [
+      "Renommez les groupes existants en cliquant sur leur titre.",
+      "Ajoutez des groupes avec le bouton <strong>+ Ajouter un groupe</strong>.",
+      "Réordonnez les groupes par <strong>glisser-déposer</strong> sur le handle <code>:::</code> à gauche, ou avec les flèches ↑↓."
+    ]},
+    { title: "Étape 3 — Assigner les conteneurs", steps: [
+      "Glissez chaque pastille depuis la zone <strong>Non assignés</strong> vers la zone pointillée du groupe voulu.",
+      "À l'intérieur d'un groupe, réordonnez les lignes par <strong>glisser-déposer</strong> (handle <code>:::</code> à gauche).",
+      "Vous pouvez aussi ajouter manuellement un conteneur via <strong>+ ajouter un conteneur</strong>."
+    ]},
+    { title: "Étape 4 — Configurer wait_for et les délais", bullets: [
+      "<span class='tag tag-orange'>wait_for</span> Active le toggle sur un conteneur critique : le script attendra qu'il soit <em>running</em> avant de continuer. Définissez le timeout en secondes (ex: 60s pour GlueTUN, 45s pour MariaDB).",
+      "<span class='tag tag-yellow'>pause</span> Définissez un délai en secondes après chaque groupe pour laisser le temps aux services de s'initialiser avant de passer au groupe suivant."
+    ]},
+    { title: "Étape 5 — Générer et installer", steps: [
+      "Cliquez sur <strong>Générer le script bash</strong>.",
+      "Copiez le script avec le bouton <strong>Copier</strong>.",
+      "Dans Unraid : <strong>Plugins → User Scripts → Add New Script</strong>, collez le script, choisissez le déclencheur <code>At Startup of Array</code>.",
+      "<strong>Important :</strong> désactivez l'Auto-Start natif sur tous les conteneurs dans l'onglet Docker, sinon ils démarreront en double."
+    ]}
+  ],
+  en: [
+    { title: "Step 1 — Import your containers", steps: [
+      "Connect via SSH to your Unraid server.",
+      "Run the command: <code>docker ps -a --format '{{.Names}}\t{{.Image}}'</code>",
+      "Copy the result (one line = name + image separated by a tab) and paste it in the <strong>Import</strong> area below.",
+      "Click <strong>Import</strong>. All your containers appear in the <strong>unassigned pool</strong> as chips."
+    ]},
+    { title: "Step 2 — Organize groups", steps: [
+      "Rename existing groups by clicking on their title.",
+      "Add groups with the <strong>+ Add empty group</strong> button.",
+      "Reorder groups by <strong>drag and drop</strong> on the <code>:::</code> handle on the left, or with the ↑↓ arrows."
+    ]},
+    { title: "Step 3 — Assign containers", steps: [
+      "Drag each chip from the <strong>Unassigned</strong> area to the dotted zone of the desired group.",
+      "Inside a group, reorder rows by <strong>drag and drop</strong> (handle <code>:::</code> on the left).",
+      "You can also manually add a container via <strong>+ add container</strong>."
+    ]},
+    { title: "Step 4 — Configure wait_for and delays", bullets: [
+      "<span class='tag tag-orange'>wait_for</span> Enable the toggle on a critical container: the script will wait until it is <em>running</em> before continuing. Set the timeout in seconds (e.g. 60s for GlueTUN, 45s for MariaDB).",
+      "<span class='tag tag-yellow'>pause</span> Set a delay in seconds after each group to let services initialize before moving to the next group."
+    ]},
+    { title: "Step 5 — Generate and install", steps: [
+      "Click <strong>Generate bash script</strong>.",
+      "Copy the script with the <strong>Copy</strong> button.",
+      "In Unraid: <strong>Plugins → User Scripts → Add New Script</strong>, paste the script, choose the trigger <code>At Startup of Array</code>.",
+      "<strong>Important:</strong> disable the native Auto-Start on all containers in the Docker tab, otherwise they will start twice."
+    ]}
+  ],
+  es: [
+    { title: "Paso 1 — Importar contenedores", steps: [
+      "Conéctate por SSH a tu servidor Unraid.",
+      "Ejecuta el comando: <code>docker ps -a --format '{{.Names}}\t{{.Image}}'</code>",
+      "Copia el resultado (una línea = nombre + imagen separados por tabulación) y pégalo en la zona <strong>Importar</strong> de abajo.",
+      "Haz clic en <strong>Importar</strong>. Todos tus contenedores aparecen en el <strong>área no asignada</strong> como fichas."
+    ]},
+    { title: "Paso 2 — Organizar grupos", steps: [
+      "Renombra los grupos existentes haciendo clic en su título.",
+      "Añade grupos con el botón <strong>+ Añadir grupo vacío</strong>.",
+      "Reordena los grupos arrastrando el handle <code>:::</code> a la izquierda, o con las flechas ↑↓."
+    ]},
+    { title: "Paso 3 — Asignar contenedores", steps: [
+      "Arrastra cada ficha desde la zona <strong>No asignados</strong> a la zona punteada del grupo deseado.",
+      "Dentro de un grupo, reordena las filas arrastrando el handle <code>:::</code> a la izquierda.",
+      "También puedes añadir manualmente un contenedor con <strong>+ añadir contenedor</strong>."
+    ]},
+    { title: "Paso 4 — Configurar wait_for y retardos", bullets: [
+      "<span class='tag tag-orange'>wait_for</span> Activa el toggle en un contenedor crítico: el script esperará hasta que esté <em>running</em> antes de continuar. Define el timeout en segundos (ej: 60s para GlueTUN, 45s para MariaDB).",
+      "<span class='tag tag-yellow'>pause</span> Define un retardo en segundos después de cada grupo para que los servicios se inicialicen antes de pasar al siguiente."
+    ]},
+    { title: "Paso 5 — Generar e instalar", steps: [
+      "Haz clic en <strong>Generar script bash</strong>.",
+      "Copia el script con el botón <strong>Copiar</strong>.",
+      "En Unraid: <strong>Plugins → User Scripts → Add New Script</strong>, pega el script, elige el disparador <code>At Startup of Array</code>.",
+      "<strong>Importante:</strong> desactiva el Auto-Start nativo en todos los contenedores en la pestaña Docker, de lo contrario iniciarán dos veces."
+    ]}
+  ],
+  de: [
+    { title: "Schritt 1 — Container importieren", steps: [
+      "Verbinde dich per SSH mit deinem Unraid-Server.",
+      "Führe den Befehl aus: <code>docker ps -a --format '{{.Names}}\t{{.Image}}'</code>",
+      "Kopiere das Ergebnis (eine Zeile = Name + Image getrennt durch Tab) und füge es in den <strong>Import</strong>-Bereich unten ein.",
+      "Klicke auf <strong>Importieren</strong>. Alle Container erscheinen im <strong>nicht zugewiesenen Bereich</strong> als Chips."
+    ]},
+    { title: "Schritt 2 — Gruppen organisieren", steps: [
+      "Benenne bestehende Gruppen um, indem du auf ihren Titel klickst.",
+      "Füge Gruppen mit der Schaltfläche <strong>+ Leere Gruppe hinzufügen</strong> hinzu.",
+      "Ordne Gruppen per <strong>Drag & Drop</strong> am <code>:::</code>-Handle links neu an, oder mit den ↑↓-Pfeilen."
+    ]},
+    { title: "Schritt 3 — Container zuweisen", steps: [
+      "Ziehe jeden Chip vom <strong>Nicht zugewiesen</strong>-Bereich in die gepunktete Zone der gewünschten Gruppe.",
+      "Innerhalb einer Gruppe ordnest du Zeilen per <strong>Drag & Drop</strong> am <code>:::</code>-Handle links um.",
+      "Du kannst auch manuell einen Container über <strong>+ Container hinzufügen</strong> ergänzen."
+    ]},
+    { title: "Schritt 4 — wait_for und Verzögerungen konfigurieren", bullets: [
+      "<span class='tag tag-orange'>wait_for</span> Aktiviere den Toggle bei einem kritischen Container: das Skript wartet, bis er <em>running</em> ist, bevor es fortfährt. Setze den Timeout in Sekunden (z.B. 60s für GlueTUN, 45s für MariaDB).",
+      "<span class='tag tag-yellow'>pause</span> Setze eine Verzögerung in Sekunden nach jeder Gruppe, damit sich die Dienste initialisieren können, bevor die nächste Gruppe startet."
+    ]},
+    { title: "Schritt 5 — Generieren und installieren", steps: [
+      "Klicke auf <strong>Bash-Skript generieren</strong>.",
+      "Kopiere das Skript mit der Schaltfläche <strong>Kopieren</strong>.",
+      "In Unraid: <strong>Plugins → User Scripts → Add New Script</strong>, füge das Skript ein, wähle den Auslöser <code>At Startup of Array</code>.",
+      "<strong>Wichtig:</strong> Deaktiviere den nativen Auto-Start aller Container im Docker-Tab, sonst starten sie doppelt."
+    ]}
+  ]
+};
+
+function renderGuide() {
+  var el = document.getElementById('guide-body');
+  if (!el) return;
+  var sections = GUIDE_CONTENT[currentLang] || GUIDE_CONTENT['fr'];
+  var html = '';
+  sections.forEach(function(section) {
+    html += '<h3>' + section.title + '</h3>';
+    var items = section.steps || section.bullets || [];
+    var prefix = section.bullets ? '&#9656;' : null;
+    items.forEach(function(item, i) {
+      html += '<div class="step"><span class="num">' + (prefix || (i+1)+'.') + '</span><span>' + item + '</span></div>';
+    });
+  });
+  el.innerHTML = html;
+}
+
+function applyI18n() {
+  var lang = TRANSLATIONS[currentLang] || TRANSLATIONS['fr'];
+  // Static elements with data-i18n
+  document.querySelectorAll('[data-i18n]').forEach(function(el) {
+    var key = el.getAttribute('data-i18n');
+    if (lang[key]) el.textContent = lang[key];
+  });
+  // Placeholders
+  document.querySelectorAll('[data-i18n-placeholder]').forEach(function(el) {
+    var key = el.getAttribute('data-i18n-placeholder');
+    if (lang[key]) el.placeholder = lang[key];
+  });
+  // Template select first option
+  var sel = document.getElementById('tpl-select');
+  if (sel && sel.options[0]) sel.options[0].text = t('js_tpl_choose');
+  // Update lang selector value
+  var ls = document.getElementById('lang-select');
+  if (ls) ls.value = currentLang;
+  // Re-render dynamic UI
+  if (typeof renderPool === 'function') renderPool();
+  if (typeof render === 'function') render();
+  renderGuide();
+}
+
+function setLang(lang) {
+  currentLang = lang;
+  localStorage.setItem('dsm-lang', lang);
+  applyI18n();
+}
+
+// ── Group name translations ───────────────────────────────────
+// Internal names are always French (canonical keys)
+// These maps translate them for display and script comments
+var GROUP_NAMES = {
+  fr: {
+    'VPN / Reseau':       'VPN / Reseau',
+    'DNS & AdBlock':      'DNS & AdBlock',
+    'Bases de donnees':   'Bases de donnees',
+    'Proxy & SSL':        'Proxy & SSL',
+    'Applications web':   'Applications web',
+    'Monitoring':         'Monitoring',
+    'Serveurs media':     'Serveurs media',
+    'Gestion medias':     'Gestion medias',
+    'Telechargement':     'Telechargement',
+    'Fichiers & Sync':    'Fichiers & Sync',
+    'Domotique':          'Domotique',
+    'Outils':             'Outils',
+    'Non classes':        'Non classes'
+  },
+  en: {
+    'VPN / Reseau':       'VPN / Network',
+    'DNS & AdBlock':      'DNS & AdBlock',
+    'Bases de donnees':   'Databases',
+    'Proxy & SSL':        'Proxy & SSL',
+    'Applications web':   'Web Applications',
+    'Monitoring':         'Monitoring',
+    'Serveurs media':     'Media Servers',
+    'Gestion medias':     'Media Management',
+    'Telechargement':     'Downloads',
+    'Fichiers & Sync':    'Files & Sync',
+    'Domotique':          'Home Automation',
+    'Outils':             'Tools',
+    'Non classes':        'Unclassified'
+  },
+  es: {
+    'VPN / Reseau':       'VPN / Red',
+    'DNS & AdBlock':      'DNS & AdBlock',
+    'Bases de donnees':   'Bases de datos',
+    'Proxy & SSL':        'Proxy & SSL',
+    'Applications web':   'Aplicaciones web',
+    'Monitoring':         'Monitorizacion',
+    'Serveurs media':     'Servidores multimedia',
+    'Gestion medias':     'Gestion multimedia',
+    'Telechargement':     'Descargas',
+    'Fichiers & Sync':    'Archivos & Sync',
+    'Domotique':          'Domótica',
+    'Outils':             'Herramientas',
+    'Non classes':        'Sin clasificar'
+  },
+  de: {
+    'VPN / Reseau':       'VPN / Netzwerk',
+    'DNS & AdBlock':      'DNS & AdBlock',
+    'Bases de donnees':   'Datenbanken',
+    'Proxy & SSL':        'Proxy & SSL',
+    'Applications web':   'Webanwendungen',
+    'Monitoring':         'Monitoring',
+    'Serveurs media':     'Medienserver',
+    'Gestion medias':     'Medienverwaltung',
+    'Telechargement':     'Downloads',
+    'Fichiers & Sync':    'Dateien & Sync',
+    'Domotique':          'Heimautomatisierung',
+    'Outils':             'Werkzeuge',
+    'Non classes':        'Nicht klassifiziert'
+  }
+};
+
+// Normalize a group name to its canonical ASCII key
+function normalizeGroupKey(name) {
+  return (name || '')
+    .replace(/é|è|ê|ë/g, 'e')
+    .replace(/à|â|ä/g, 'a')
+    .replace(/ô|ö/g, 'o')
+    .replace(/û|ù|ü/g, 'u')
+    .replace(/î|ï/g, 'i')
+    .replace(/ç/g, 'c')
+    .replace(/é/g, 'e')
+    .trim();
+}
+
+// Translate a group name to current language for display
+function tGroup(name) {
+  var key = normalizeGroupKey(name);
+  var map = GROUP_NAMES[currentLang] || GROUP_NAMES['fr'];
+  return map[key] || name;
+}
+
+
+var groups = [];
+var pool = []; // noms non assignes
+var importedNames = []; // noms bruts issus du docker ps
+var importedImages = {}; // map nom -> image
+var groupDragSrc = null;
+var rowDragSrc = null;  // {gi, ci}
+var chipDragName = null; // nom du chip en cours de drag depuis pool
+
+// ── Guide toggle ─────────────────────────────────────────────
+document.getElementById('guide-toggle').addEventListener('click', function() {
+  var body = document.getElementById('guide-body');
+  var arrow = document.getElementById('guide-arrow');
+  body.classList.toggle('visible');
+  arrow.classList.toggle('open');
+});
+
+// ── Import ───────────────────────────────────────────────────
+document.getElementById('btn-import').addEventListener('click', function() {
+  var raw = document.getElementById('docker-paste').value.trim();
+  if (!raw) { setStatus('Collez le résultat de docker ps avant d\'importer.', true); return; }
+  var names = raw.split('\n').map(function(l){ return l.trim(); }).filter(function(l){ return l.length > 0; });
+  if (!names.length) { setStatus(t('js_no_name'), true); return; }
+
+  // On retire les noms deja presents dans les groupes
+  // Memorise les noms ET images importes (format nom\timage ou nom seul)
+  names.forEach(function(n) {
+    var parts = n.split(/\t|\s{2,}/);
+    var realName = parts[0].trim().split(/\s+/)[0];
+    var realImage = parts.length >= 2 ? parts[1].trim() : '';
+    if (realName && importedNames.indexOf(realName) === -1) {
+      importedNames.push(realName);
+      if (realImage) importedImages[realName] = realImage;
+    }
+  });
+  var assigned = getAllAssigned();
+  var added = 0;
+  names.forEach(function(n) {
+    var realName = n.trim().split(/\s+/)[0];
+    if (realName && assigned.indexOf(realName) === -1 && pool.indexOf(realName) === -1) {
+      pool.push(realName.trim().split(/\s+/)[0]);
+      added++;
+    }
+  });
+  setStatus(t('js_added')(added), false);
+  // Unlock groups area
+  var wrapper = document.getElementById('groups-wrapper');
+  var notice = document.getElementById('lock-notice');
+  wrapper.classList.remove('groups-locked');
+  notice.classList.remove('visible');
+  // Enable classify button
+  document.getElementById('btn-classify').disabled = false;
+  renderPool();
+});
+
+function setStatus(msg, err) {
+  var el = document.getElementById('import-status');
+  el.textContent = msg;
+  el.className = 'import-status ' + (err ? 'err' : 'ok');
+}
+
+function getAllAssigned() {
+  var out = [];
+  groups.forEach(function(g) { g.containers.forEach(function(c){ if(c.name) out.push(c.name); }); });
+  return out;
+}
+
+// ── Pool render ───────────────────────────────────────────────
+function renderPool() {
+  var box = document.getElementById('pool-box');
+  box.innerHTML = '';
+  if (!pool.length) {
+    var em = document.createElement('span');
+    em.className = 'pool-empty';
+    em.textContent = t('js_pool_empty');
+    box.appendChild(em);
+    return;
+  }
+  pool.forEach(function(name) {
+    box.appendChild(makeChip(name));
+  });
+
+  // Drop zone : retour au pool depuis un groupe
+  box.addEventListener('dragover', function(e){ e.preventDefault(); box.classList.add('drag-over'); });
+  box.addEventListener('dragleave', function(){ box.classList.remove('drag-over'); });
+  box.addEventListener('drop', function(e){
+    e.preventDefault(); box.classList.remove('drag-over');
+    if (rowDragSrc !== null) {
+      var c = groups[rowDragSrc.gi].containers.splice(rowDragSrc.ci, 1)[0];
+      if (c && c.name) pool.push(c.name);
+      rowDragSrc = null;
+      render(); renderPool();
+    }
+  });
+}
+
+function makeChip(name) {
+  var chip = document.createElement('div');
+  chip.className = 'chip';
+  chip.draggable = true;
+  chip.dataset.name = name;
+
+  var hdl = document.createElement('span');
+  hdl.className = 'chip-handle';
+  hdl.textContent = ':::';
+
+  var lbl = document.createElement('span');
+  lbl.textContent = name;
+
+  chip.appendChild(hdl);
+  chip.appendChild(lbl);
+
+  chip.addEventListener('dragstart', function(e) {
+    chipDragName = name;
+    rowDragSrc = null;
+    setTimeout(function(){ chip.classList.add('dragging'); }, 0);
+  });
+  chip.addEventListener('dragend', function() {
+    chip.classList.remove('dragging');
+    chipDragName = null;
+  });
+  return chip;
+}
+
+// ── Groups render ─────────────────────────────────────────────
+function render() {
+  var c = document.getElementById('groups-container');
+  c.innerHTML = '';
+  for (var i = 0; i < groups.length; i++) {
+    c.appendChild(buildGroup(i));
+  }
+}
+
+function buildGroup(gi) {
+  var g = groups[gi];
+  var card = document.createElement('div');
+  card.className = 'group-card';
+  card.draggable = true;
+
+  // Header
+  var hdr = document.createElement('div');
+  hdr.className = 'group-header';
+
+  var hdl = document.createElement('span');
+  hdl.className = 'drag-handle';
+  hdl.textContent = ':::';
+
+  var nameIn = document.createElement('input');
+  nameIn.className = 'group-name-input';
+  nameIn.value = tGroup(g.name);
+  nameIn.placeholder = 'Nom du groupe';
+  nameIn.addEventListener('mousedown', function(e){ e.stopPropagation(); });
+  nameIn.addEventListener('input', (function(i){ return function(){ groups[i].name = this.value; }; })(gi));
+
+  var acts = document.createElement('div');
+  acts.className = 'group-actions';
+  acts.appendChild(mkBtn('↑', false, (function(i){ return function(){ moveGroup(i,-1); }; })(gi)));
+  acts.appendChild(mkBtn('↓', false, (function(i){ return function(){ moveGroup(i,1); }; })(gi)));
+  acts.appendChild(mkBtn('x', true,  (function(i){ return function(){ removeGroup(i); }; })(gi)));
+
+  hdr.appendChild(hdl); hdr.appendChild(nameIn); hdr.appendChild(acts);
+
+  // Body
+  var body = document.createElement('div');
+  body.className = 'group-body';
+
+  // Col headers (only if containers exist)
+  if (g.containers.length > 0) {
+    var colH = document.createElement('div');
+    colH.className = 'col-headers';
+    colH.innerHTML = '<span></span><span class="lbl left" data-i18n="col_container">Conteneur</span><span class="lbl" data-i18n="col_timeout">Timeout(s)</span><span class="lbl">wait_for</span><span class="lbl" data-i18n="col_active">actif</span><span></span>';
+    body.appendChild(colH);
+  }
+
+  // Drop zone for chips from pool
+  var dropZone = document.createElement('div');
+  dropZone.className = 'group-drop-zone' + (g.containers.length === 0 ? ' empty' : '');
+
+  var hint = document.createElement('div');
+  hint.className = 'drop-hint';
+  hint.textContent = 'Deposez vos conteneurs ici';
+  dropZone.appendChild(hint);
+
+  for (var ci = 0; ci < g.containers.length; ci++) {
+    dropZone.appendChild(buildRow(gi, ci));
+  }
+
+  dropZone.addEventListener('dragover', function(e){ e.preventDefault(); dropZone.classList.add('drag-over'); });
+  dropZone.addEventListener('dragleave', function(){ dropZone.classList.remove('drag-over'); });
+  dropZone.addEventListener('drop', (function(i, dz){ return function(e) {
+    e.preventDefault(); e.stopPropagation();
+    dz.classList.remove('drag-over');
+    if (chipDragName) {
+      // Depuis le pool
+      var idx = pool.indexOf(chipDragName);
+      if (idx !== -1) pool.splice(idx, 1);
+      groups[i].containers.push({ name: chipDragName, waitFor: false, timeout: 30, enabled: true });
+      chipDragName = null;
+      render(); renderPool();
+    }
+  }; })(gi, dropZone));
+
+  body.appendChild(dropZone);
+
+  // Add container manually
+  var addBtn = document.createElement('button');
+  addBtn.className = 'btn-add-container';
+  addBtn.textContent = '+ ajouter manuellement';
+  addBtn.addEventListener('click', (function(i){ return function(){ addContainer(i); }; })(gi));
+  body.appendChild(addBtn);
+
+  // Footer pause
+  var footer = document.createElement('div');
+  footer.className = 'group-footer';
+  var lbl1 = document.createElement('label'); lbl1.textContent = t('js_pause_label');
+  var pIn = document.createElement('input');
+  pIn.className = 'input-sm'; pIn.type = 'number'; pIn.min = 0; pIn.max = 300; pIn.value = g.pause;
+  pIn.addEventListener('mousedown', function(e){ e.stopPropagation(); });
+  pIn.addEventListener('input', (function(i){ return function(){ groups[i].pause = parseInt(this.value)||0; }; })(gi));
+  var lbl2 = document.createElement('label'); lbl2.textContent = 'secondes';
+  footer.appendChild(lbl1); footer.appendChild(pIn); footer.appendChild(lbl2);
+  body.appendChild(footer);
+
+  card.appendChild(hdr); card.appendChild(body);
+
+  // Group drag & drop reorder
+  card.addEventListener('dragstart', (function(i, el){ return function(e){
+    if (e.target !== el && e.target !== hdr && e.target !== hdl) return;
+    groupDragSrc = i;
+    setTimeout(function(){ el.classList.add('dragging'); }, 0);
+  }; })(gi, card));
+  card.addEventListener('dragend', (function(el){ return function(){ el.classList.remove('dragging'); groupDragSrc = null; }; })(card));
+  card.addEventListener('dragover', function(e){
+    if (chipDragName || rowDragSrc !== null) return; // handled by dropzone
+    e.preventDefault(); card.classList.add('drag-over-group');
+  });
+  card.addEventListener('dragleave', function(){ card.classList.remove('drag-over-group'); });
+  card.addEventListener('drop', (function(i, el){ return function(e){
+    el.classList.remove('drag-over-group');
+    if (groupDragSrc !== null && groupDragSrc !== i) {
+      e.preventDefault();
+      var m = groups.splice(groupDragSrc, 1)[0];
+      groups.splice(i, 0, m);
+      groupDragSrc = null;
+      render();
+    }
+  }; })(gi, card));
+
+  return card;
+}
+
+function buildRow(gi, ci) {
+  var c = groups[gi].containers[ci];
+  var row = document.createElement('div');
+  row.className = 'container-row';
+  row.draggable = true;
+
+  var hdl = document.createElement('span');
+  hdl.className = 'drag-handle';
+  hdl.style.fontSize = '11px';
+  hdl.textContent = ':::';
+
+  var nIn = document.createElement('input');
+  nIn.className = 'input'; nIn.value = c.name; nIn.placeholder = 'nom-du-conteneur';
+  nIn.addEventListener('mousedown', function(e){ e.stopPropagation(); });
+  nIn.addEventListener('input', (function(i,j){ return function(){ groups[i].containers[j].name = this.value; }; })(gi,ci));
+
+  var tIn = document.createElement('input');
+  tIn.className = 'input'; tIn.type = 'number'; tIn.min = 5; tIn.max = 300; tIn.value = c.timeout;
+  if (!c.waitFor) tIn.disabled = true;
+  tIn.addEventListener('mousedown', function(e){ e.stopPropagation(); });
+  tIn.addEventListener('input', (function(i,j){ return function(){ groups[i].containers[j].timeout = parseInt(this.value)||30; }; })(gi,ci));
+
+  var tw = document.createElement('div');
+  tw.className = 'toggle-wrap';
+  var lbl = document.createElement('label'); lbl.className = 'toggle';
+  var chk = document.createElement('input'); chk.type = 'checkbox'; chk.checked = c.waitFor;
+  chk.addEventListener('change', (function(i,j){ return function(){ toggleWaitFor(i,j,this.checked); }; })(gi,ci));
+  var sl = document.createElement('span'); sl.className = 'toggle-slider';
+  lbl.appendChild(chk); lbl.appendChild(sl); tw.appendChild(lbl);
+
+  var del = mkBtn('x', true, (function(i,j){ return function(){
+    var c2 = groups[i].containers.splice(j,1)[0];
+    if (c2 && c2.name) { pool.push(c2.name); renderPool(); }
+    render();
+  }; })(gi,ci));
+
+  // Enabled toggle
+  var enWrap = document.createElement('div');
+  enWrap.className = 'toggle-wrap';
+  var enLbl = document.createElement('label'); enLbl.className = 'toggle';
+  var enChk = document.createElement('input'); enChk.type = 'checkbox'; enChk.checked = (c.enabled !== false);
+  enChk.addEventListener('change', (function(i,j){ return function(){ groups[i].containers[j].enabled = this.checked; render(); }; })(gi,ci));
+  var enSl = document.createElement('span'); enSl.className = 'toggle-slider';
+  enLbl.appendChild(enChk); enLbl.appendChild(enSl); enWrap.appendChild(enLbl);
+
+  // Dim row if disabled
+  if (c.enabled === false) { row.style.opacity = '0.45'; }
+
+  row.appendChild(hdl); row.appendChild(nIn); row.appendChild(tIn); row.appendChild(tw); row.appendChild(enWrap); row.appendChild(del);
+
+  // Row drag & drop reorder within group
+  row.addEventListener('dragstart', (function(i,j,el){ return function(e){
+    e.stopPropagation();
+    chipDragName = null;
+    rowDragSrc = {gi:i, ci:j};
+    setTimeout(function(){ el.classList.add('dragging-row'); }, 0);
+  }; })(gi,ci,row));
+  row.addEventListener('dragend', (function(el){ return function(){
+    el.classList.remove('dragging-row');
+    el.classList.remove('drag-over-row');
+  }; })(row));
+  row.addEventListener('dragover', function(e){ e.preventDefault(); e.stopPropagation(); row.classList.add('drag-over-row'); });
+  row.addEventListener('dragleave', function(){ row.classList.remove('drag-over-row'); });
+  row.addEventListener('drop', (function(i,j,el){ return function(e){
+    e.preventDefault(); e.stopPropagation();
+    el.classList.remove('drag-over-row');
+    if (!rowDragSrc) return;
+    if (rowDragSrc.gi === i && rowDragSrc.ci !== j) {
+      var moved = groups[i].containers.splice(rowDragSrc.ci,1)[0];
+      groups[i].containers.splice(j,0,moved);
+      rowDragSrc = null;
+      render(); renderPool();
+    }
+  }; })(gi,ci,row));
+
+  return row;
+}
+
+function mkBtn(txt, danger, fn) {
+  var b = document.createElement('button');
+  b.className = 'btn-icon' + (danger ? ' danger' : '');
+  b.textContent = txt;
+  b.addEventListener('mousedown', function(e){ e.stopPropagation(); });
+  b.addEventListener('click', fn);
+  return b;
+}
+
+// ── Actions ──────────────────────────────────────────────────
+function addGroup() {
+  groups.push({ name: 'Nouveau Groupe', pause: 5, containers: [] });
+  render();
+}
+function removeGroup(gi) {
+  if (groups.length <= 1) { alert('Il faut au moins un groupe.'); return; }
+  // Remet les conteneurs dans le pool
+  groups[gi].containers.forEach(function(c){ if(c.name) pool.push(c.name); });
+  groups.splice(gi,1);
+  render(); renderPool();
+}
+function moveGroup(gi, dir) {
+  var ni = gi+dir;
+  if (ni<0||ni>=groups.length) return;
+  var tmp=groups[gi]; groups[gi]=groups[ni]; groups[ni]=tmp;
+  render();
+}
+function addContainer(gi) {
+  groups[gi].containers.push({ name:'', waitFor:false, timeout:30, enabled:true });
+  render();
+  setTimeout(function(){
+    var ci=groups[gi].containers.length-1;
+    var row=document.getElementById('crow-'+gi+'-'+ci);
+    if(row) row.querySelector('input').focus();
+  },50);
+}
+function removeContainer(gi,ci) {
+  var c=groups[gi].containers.splice(ci,1)[0];
+  if(c&&c.name) { pool.push(c.name); renderPool(); }
+  render();
+}
+function toggleWaitFor(gi,ci,val) {
+  groups[gi].containers[ci].waitFor=val; render();
+}
+
+// ── Generate ─────────────────────────────────────────────────
+
+// ── Export / Import configuration JSON ───────────────────────
+function exportConfig() {
+  var config = {
+    version: 1,
+    exportedAt: new Date().toISOString(),
+    groups: groups
+  };
+  var json = JSON.stringify(config, null, 2);
+  var blob = new Blob([json], { type: 'application/json' });
+  var url  = URL.createObjectURL(blob);
+  var a    = document.createElement('a');
+  a.href     = url;
+  a.download = 'docker-startup-config.json';
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+  URL.revokeObjectURL(url);
+  setConfigStatus(t('js_export_ok'), 'green');
+}
+
+function importConfig(event) {
+  var file = event.target.files[0];
+  if (!file) return;
+  var reader = new FileReader();
+  reader.onload = function(e) {
+    try {
+      var config = JSON.parse(e.target.result);
+      if (!config.groups || !Array.isArray(config.groups)) {
+        throw new Error('format invalide');
+      }
+      var hasData = (groups.length > 0 && groups.some(function(g){ return g.containers && g.containers.length > 0; })) || pool.length > 0;
+      if (hasData) {
+        if (!confirm(t('js_import_confirm'))) {
+          event.target.value = '';
+          return;
+        }
+      }
+      groups = config.groups;
+      render();
+      renderPool();
+      var nb = groups.length;
+      setConfigStatus(t('js_import_ok')(nb), 'green');
+    } catch(err) {
+      setConfigStatus(t('js_import_err')(err.message), 'red');
+    }
+    event.target.value = '';
+  };
+  reader.readAsText(file);
+}
+
+function setConfigStatus(msg, color) {
+  var el = document.getElementById('config-status');
+  if (!el) return;
+  el.textContent = msg;
+  el.style.color = color === 'green' ? 'var(--green)' : color === 'red' ? 'var(--red, #e74c3c)' : 'var(--muted)';
+  setTimeout(function(){ el.textContent = ''; }, 4000);
+}
+
+function generateScript() {
+  var L=[];
+  var locales = { fr: 'fr-FR', en: 'en-GB', es: 'es-ES', de: 'de-DE' };
+  var d=new Date().toLocaleDateString(locales[currentLang] || 'fr-FR');
+  L.push('#!/bin/bash');
+  L.push('# ================================================================');
+  L.push(t('js_script_title'));
+  L.push(t('js_script_generated')(d));
+  L.push(t('js_script_trigger'));
+  L.push('# ================================================================');
+  L.push('');
+  L.push('LOG="/tmp/docker_start_order.log"');
+  L.push(t('js_script_start_log'));
+  L.push('');
+  L.push('wait_for() {');
+  L.push('    local name="$1" timeout="${2:-60}" elapsed=0');
+  L.push(t('js_script_wait_log'));
+  L.push('    while [ $elapsed -lt $timeout ]; do');
+  L.push('        S=$(docker inspect --format=\'{{.State.Status}}\' "$name" 2>/dev/null)');
+  L.push('        [ "$S" = "running" ] && echo "$(date) - OK $name" | tee -a "$LOG" && return 0');
+  L.push('        sleep 2; elapsed=$((elapsed+2))');
+  L.push('    done');
+  L.push('    echo "$(date) - TIMEOUT $name" | tee -a "$LOG"; return 1');
+  L.push('}');
+  L.push('');
+  L.push('start_container() {');
+  L.push('    local name="$1"');
+  L.push('    S=$(docker inspect --format=\'{{.State.Status}}\' "$name" 2>/dev/null)');
+  L.push('    if [ "$S" = "running" ]; then');
+  L.push('        echo "$(date) - SKIP $name" | tee -a "$LOG"');
+  L.push('    else');
+  L.push('        echo "$(date) - START $name" | tee -a "$LOG"');
+  L.push('        docker start "$name"');
+  L.push('    fi');
+  L.push('}');
+  L.push('');
+
+  // Trie les groupes par priorite canonique avant generation
+  var sortedGroups = groups.slice().sort(function(a, b) {
+    return getGroupPriority(a.name) - getGroupPriority(b.name);
+  });
+
+  for (var gi=0; gi<sortedGroups.length; gi++) {
+    var g=sortedGroups[gi];
+    var hasContainers = g.containers.some(function(c){ return c.name.trim(); });
+    if (!hasContainers) continue;
+    L.push('# ================================================================');
+    L.push('# GROUPE '+(gi+1)+' - '+g.name.toUpperCase());
+    L.push('# ================================================================');
+    L.push('echo "--- ' + tGroup(g.name) + ' ---" | tee -a "$LOG"');
+    L.push('');
+    for (var ci=0; ci<g.containers.length; ci++) {
+      var c=g.containers[ci];
+      if (!c.name.trim()) continue;
+      if (c.enabled === false) { L.push(t('js_script_disabled') + c.name); continue; }
+      var cname = c.name.trim().split(/\s+/)[0];
+      L.push('start_container "'+cname+'"');
+      if (c.waitFor) L.push('wait_for "'+cname+'" '+c.timeout);
+    }
+    if (g.pause>0) { L.push(''); L.push('sleep '+g.pause); }
+    L.push('');
+  }
+
+  L.push('# ================================================================');
+  L.push(t('js_script_end_log'));
+
+  var script=L.join('\n');
+  var el=document.getElementById('script-output');
+  var highlighted=script.split('\n').map(function(line){
+    var h=htmlEsc(line);
+    if(line.trim().charAt(0)==='#') return '<span class="sh-comment">'+h+'</span>';
+    if(/^(wait_for|start_container|echo|sleep)\b/.test(line.trim()))
+      return h.replace(/^(\s*)(wait_for|start_container|echo|sleep)/,function(m,sp,fn){ return sp+'<span class="sh-func">'+fn+'</span>'; });
+    return h;
+  }).join('\n');
+  el.innerHTML=highlighted;
+  el._raw=script;
+  var sec=document.getElementById('output-section');
+  sec.style.display='block';
+  sec.scrollIntoView({behavior:'smooth'});
+}
+
+function copyScript() {
+  var el=document.getElementById('script-output');
+  if(!el._raw) return;
+  var btn=document.getElementById('copy-btn');
+  function onSuccess() {
+    btn.textContent=t('js_copy_ok'); btn.classList.add('copied');
+    setTimeout(function(){ btn.textContent=t('js_copy_btn'); btn.classList.remove('copied'); },2000);
+  }
+  // Methode moderne (HTTPS / localhost)
+  if (navigator.clipboard && navigator.clipboard.writeText) {
+    navigator.clipboard.writeText(el._raw).then(onSuccess).catch(function() {
+      fallbackCopy(el._raw, onSuccess);
+    });
+  } else {
+    fallbackCopy(el._raw, onSuccess);
+  }
+}
+
+function fallbackCopy(text, onSuccess) {
+  // Methode compatible HTTP simple
+  var ta = document.createElement('textarea');
+  ta.value = text;
+  ta.style.cssText = 'position:fixed;top:0;left:0;opacity:0';
+  document.body.appendChild(ta);
+  ta.focus();
+  ta.select();
+  try {
+    document.execCommand('copy');
+    onSuccess();
+  } catch(e) {
+    alert(t('js_copy_fail'));
+  }
+  document.body.removeChild(ta);
+}
+
+function htmlEsc(s) {
+  return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+}
+
+// ── Templates ────────────────────────────────────────────────
+var TEMPLATES = {
+  vpn: {
+    name: 'VPN / Accès réseau',
+    pause: 10,
+    desc: 'Conteneurs VPN (GlueTUN, WireGuard, OpenVPN...). Doit demarrer EN PREMIER — les autres services en dependent.',
+    containers: [
+      { name: 'binhex-official-gluetun', waitFor: true,  timeout: 60, enabled: true },
+      { name: 'wireguard',               waitFor: false, timeout: 30, enabled: true }
+    ]
+  },
+  dns: {
+    name: 'DNS & AdBlock',
+    pause: 5,
+    desc: 'Serveurs DNS locaux et bloqueurs de publicites (AdGuard Home, Pi-hole, Unbound...).',
+    containers: [
+      { name: 'AdGuard-Home', waitFor: false, timeout: 30, enabled: true },
+      { name: 'pihole',       waitFor: false, timeout: 30, enabled: true },
+      { name: 'unbound',      waitFor: false, timeout: 30, enabled: true }
+    ]
+  },
+  proxy: {
+    name: 'Proxy inverse & SSL',
+    pause: 5,
+    desc: 'Reverse proxy et gestion des certificats SSL (Nginx Proxy Manager, Traefik, Caddy...).',
+    containers: [
+      { name: 'nginx',             waitFor: false, timeout: 30, enabled: true },
+      { name: 'NginxProxyManager', waitFor: true,  timeout: 30, enabled: true },
+      { name: 'traefik',           waitFor: false, timeout: 30, enabled: true },
+      { name: 'caddy',             waitFor: false, timeout: 30, enabled: true }
+    ]
+  },
+  databases: {
+    name: 'Bases de données',
+    pause: 10,
+    desc: 'Serveurs de bases de données. Doivent démarrer AVANT les applications qui les utilisent.',
+    containers: [
+      { name: 'MariaDB-Official', waitFor: true,  timeout: 45, enabled: true },
+      { name: 'postgresql17',     waitFor: false, timeout: 30, enabled: true },
+      { name: 'redis',            waitFor: false, timeout: 30, enabled: true },
+      { name: 'mongodb',          waitFor: false, timeout: 30, enabled: true },
+      { name: 'influxdb',         waitFor: false, timeout: 30, enabled: true }
+    ]
+  },
+  webapps: {
+    name: 'Applications web',
+    pause: 5,
+    desc: 'Applications web générales (Nextcloud, Vaultwarden, Gitea, Paperless...). Démarre après les BDD.',
+    containers: [
+      { name: 'nextcloud',                  waitFor: false, timeout: 30, enabled: true },
+      { name: 'vaultwarden',                waitFor: false, timeout: 30, enabled: true },
+      { name: 'OnlyOfficeDocumentServer',   waitFor: false, timeout: 30, enabled: true },
+      { name: 'gitea',                      waitFor: false, timeout: 30, enabled: true },
+      { name: 'paperless-ngx',              waitFor: false, timeout: 30, enabled: true },
+      { name: 'phpmyadmin',                 waitFor: false, timeout: 30, enabled: true }
+    ]
+  },
+  monitoring: {
+    name: 'Monitoring & Dashboard',
+    pause: 5,
+    desc: 'Tableaux de bord et outils de surveillance système (Glances, Grafana, Prometheus, Uptime Kuma...).',
+    containers: [
+      { name: 'Glances',       waitFor: false, timeout: 30, enabled: true },
+      { name: 'grafana',       waitFor: false, timeout: 30, enabled: true },
+      { name: 'prometheus',    waitFor: false, timeout: 30, enabled: true },
+      { name: 'uptime-kuma',   waitFor: false, timeout: 30, enabled: true },
+      { name: 'netdata',       waitFor: false, timeout: 30, enabled: true },
+      { name: 'speedtest-tracker', waitFor: false, timeout: 30, enabled: true }
+    ]
+  },
+  media_server: {
+    name: 'Serveurs média',
+    pause: 5,
+    desc: 'Serveurs de streaming et lecture media (Jellyfin, Plex, Emby, Audiobookshelf, Navidrome...).',
+    containers: [
+      { name: 'jellyfin',       waitFor: false, timeout: 30, enabled: true },
+      { name: 'plex',           waitFor: false, timeout: 30, enabled: true },
+      { name: 'emby',           waitFor: false, timeout: 30, enabled: true },
+      { name: 'audiobookshelf', waitFor: false, timeout: 30, enabled: true },
+      { name: 'navidrome',      waitFor: false, timeout: 30, enabled: true },
+      { name: 'Jellystat',      waitFor: false, timeout: 30, enabled: true }
+    ]
+  },
+  media_dl: {
+    name: 'Téléchargement',
+    pause: 0,
+    desc: 'Stack de téléchargement. FlareSolverr et le client torrent/usenet démarrent en premiers.',
+    containers: [
+      { name: 'flaresolverr',  waitFor: true,  timeout: 30, enabled: true },
+      { name: 'jackett',       waitFor: false, timeout: 30, enabled: true },
+      { name: 'prowlarr',      waitFor: false, timeout: 30, enabled: true },
+      { name: 'qbittorrent',   waitFor: true,  timeout: 30, enabled: true },
+      { name: 'sabnzbd',       waitFor: false, timeout: 30, enabled: true },
+      { name: 'sonarr',        waitFor: false, timeout: 30, enabled: true },
+      { name: 'radarr',        waitFor: false, timeout: 30, enabled: true },
+      { name: 'lidarr',        waitFor: false, timeout: 30, enabled: true },
+      { name: 'readarr',       waitFor: false, timeout: 30, enabled: true },
+      { name: 'cross-seed',    waitFor: false, timeout: 30, enabled: true },
+      { name: 'qbit_manage',   waitFor: false, timeout: 30, enabled: true }
+    ]
+  },
+  media_manage: {
+    name: 'Gestion des médias',
+    pause: 5,
+    desc: 'Outils de traitement et gestion de la librairie media (Unmanic, Bazarr, Tdarr, Seerr...).',
+    containers: [
+      { name: 'unmanic',  waitFor: false, timeout: 30, enabled: true },
+      { name: 'bazarr',   waitFor: false, timeout: 30, enabled: true },
+      { name: 'tdarr',    waitFor: false, timeout: 30, enabled: true },
+      { name: 'Seerr',    waitFor: false, timeout: 30, enabled: true },
+      { name: 'overseerr',waitFor: false, timeout: 30, enabled: true }
+    ]
+  },
+  homeauto: {
+    name: 'Domotique',
+    pause: 5,
+    desc: 'Automatisation maison (Home Assistant, Node-RED, Zigbee2MQTT, Mosquitto...).',
+    containers: [
+      { name: 'homeassistant',  waitFor: true,  timeout: 60, enabled: true },
+      { name: 'node-red',       waitFor: false, timeout: 30, enabled: true },
+      { name: 'zigbee2mqtt',    waitFor: false, timeout: 30, enabled: true },
+      { name: 'mosquitto',      waitFor: false, timeout: 30, enabled: true },
+      { name: 'esphome',        waitFor: false, timeout: 30, enabled: true }
+    ]
+  },
+  documents: {
+    name: 'Documents & Fichiers',
+    pause: 5,
+    desc: 'Gestion de fichiers et documents (Nextcloud, FileBrowser, Krusader, Paperless, Syncthing...).',
+    containers: [
+      { name: 'FileBrowser',      waitFor: false, timeout: 30, enabled: true },
+      { name: 'Krusader',         waitFor: false, timeout: 30, enabled: true },
+      { name: 'binhex-syncthing', waitFor: false, timeout: 30, enabled: true },
+      { name: 'paperless-ngx',    waitFor: false, timeout: 30, enabled: true }
+    ]
+  },
+  games: {
+    name: 'Jeux & Gaming',
+    pause: 5,
+    desc: 'Serveurs de jeux et emulation (Minecraft, Valheim, Steam, EmulatorJS...).',
+    containers: [
+      { name: 'minecraft',    waitFor: false, timeout: 30, enabled: true },
+      { name: 'valheim',      waitFor: false, timeout: 30, enabled: true },
+      { name: 'steam-headless', waitFor: false, timeout: 30, enabled: true },
+      { name: 'emulatorjs',   waitFor: false, timeout: 30, enabled: true }
+    ]
+  },
+  dev: {
+    name: 'Developpement',
+    pause: 5,
+    desc: 'Outils de developpement et CI/CD (Gitea, Drone, Code-Server, Portainer...).',
+    containers: [
+      { name: 'gitea',        waitFor: false, timeout: 30, enabled: true },
+      { name: 'drone',        waitFor: false, timeout: 30, enabled: true },
+      { name: 'code-server',  waitFor: false, timeout: 30, enabled: true },
+      { name: 'portainer',    waitFor: false, timeout: 30, enabled: true },
+      { name: 'registry',     waitFor: false, timeout: 30, enabled: true }
+    ]
+  },
+  backup: {
+    name: 'Sauvegarde & Sync',
+    pause: 5,
+    desc: 'Sauvegardes et synchronisation (Duplicati, Restic, Syncthing, Borgmatic...).',
+    containers: [
+      { name: 'duplicati',        waitFor: false, timeout: 30, enabled: true },
+      { name: 'binhex-syncthing', waitFor: false, timeout: 30, enabled: true },
+      { name: 'borgmatic',        waitFor: false, timeout: 30, enabled: true },
+      { name: 'restic',           waitFor: false, timeout: 30, enabled: true }
+    ]
+  },
+  empty: {
+    name: 'Nouveau groupe',
+    pause: 5,
+    desc: t('js_group_empty'),
+    containers: []
+  }
+};
+
+document.getElementById('tpl-select').addEventListener('change', function() {
+  var key = this.value;
+  var descEl = document.getElementById('tpl-desc');
+  var btnEl = document.getElementById('btn-tpl-add');
+  if (!key) {
+    descEl.classList.remove('visible'); descEl.textContent = '';
+    btnEl.disabled = true; return;
+  }
+  var tpl = TEMPLATES[key];
+  descEl.textContent = tpl.desc + (tpl.containers.length ? ' (' + tpl.containers.length + ' conteneurs pre-configures, modifiables).' : '');
+  descEl.classList.add('visible');
+  btnEl.disabled = false;
+});
+
+document.getElementById('btn-tpl-add').addEventListener('click', function() {
+  var key = document.getElementById('tpl-select').value;
+  if (!key || !TEMPLATES[key]) return;
+  var tpl = TEMPLATES[key];
+  var newGroup = {
+    name: tpl.name,
+    pause: tpl.pause,
+    containers: []
+  };
+  groups.push(newGroup);
+  // Les conteneurs du template vont dans le pool UNIQUEMENT s ils ont ete importes
+  var assigned = getAllAssigned();
+  tpl.containers.forEach(function(c) {
+    if (importedNames.indexOf(c.name) !== -1 && assigned.indexOf(c.name) === -1 && pool.indexOf(c.name) === -1) {
+      pool.push(c.name);
+    }
+  });
+  render();
+  renderPool();
+  // Reset select
+  document.getElementById('tpl-select').value = '';
+  document.getElementById('tpl-desc').classList.remove('visible');
+  document.getElementById('btn-tpl-add').disabled = true;
+  // Scroll to new group
+  setTimeout(function(){
+    var gc = document.getElementById('groups-container');
+    if (gc.lastChild) gc.lastChild.scrollIntoView({ behavior: 'smooth', block: 'center' });
+  }, 100);
+});
+
+// Init button state
+document.getElementById('btn-tpl-add').disabled = true;
+
+
+// ── Classification engine ─────────────────────────────────────
+// Knowledge base: image pattern → {group, waitFor, timeout}
+// ================================================================
+// APPFEED ENGINE
+// Télécharge applicationFeed-raw.json depuis GitHub
+// Cache 7 jours dans localStorage
+// ================================================================
+
+var APPFEED_URL   = 'https://raw.githubusercontent.com/Squidly271/AppFeed/refs/heads/master/applicationFeed-raw.json';
+var APPFEED_KEY   = 'unraid_appfeed_cache';
+var APPFEED_DATE_KEY = 'unraid_appfeed_date';
+var APPFEED_TTL   = 7 * 24 * 60 * 60 * 1000; // 7 jours en ms
+var appfeedData   = null; // tableau des apps une fois charge
+var appfeedReady  = false;
+
+// Map image -> categorie Unraid (construite depuis AppFeed)
+var appfeedImageMap = {};  // 'lscr.io/linuxserver/jellyfin' -> 'MediaApp:Video'
+var appfeedNameMap  = {};  // 'jellyfin' -> 'MediaApp:Video'
+
+// Catégories AppFeed (CategoryList) -> nos groupes, par priorite
+// Plus le chiffre est bas, plus la categorie est prioritaire
+// Les categories trop generiques (Tools-Utilities seul, Productivity seul) sont ignorees
+var CATEGORY_PRIORITY = [
+  { cat: 'Network-VPN',      group: 'VPN / Réseau',      prio: 1  },
+  { cat: 'Network-DNS',      group: 'DNS & AdBlock',      prio: 2  },
+  { cat: 'Network-Proxy',    group: 'Proxy & SSL',        prio: 3  },
+  { cat: 'Security',         group: 'DNS & AdBlock',      prio: 3  },
+  { cat: 'Network-Privacy',  group: 'DNS & AdBlock',      prio: 3  },
+  { cat: 'Downloaders',      group: 'Téléchargement',     prio: 4  },
+  { cat: 'MediaServer-Video',group: 'Serveurs média',     prio: 5  },
+  { cat: 'MediaServer-Music',group: 'Serveurs média',     prio: 5  },
+  { cat: 'MediaServer-Photos',group:'Serveurs média',     prio: 5  },
+  { cat: 'MediaServer-Books',group: 'Serveurs média',     prio: 5  },
+  { cat: 'MediaServer-Other',group: 'Serveurs média',     prio: 5  },
+  { cat: 'MediaServer',      group: 'Serveurs média',     prio: 5  },
+  { cat: 'MediaApp-Video',   group: 'Gestion médias',     prio: 6  },
+  { cat: 'MediaApp-Music',   group: 'Gestion médias',     prio: 6  },
+  { cat: 'MediaApp-Photos',  group: 'Gestion médias',     prio: 6  },
+  { cat: 'MediaApp-Other',   group: 'Gestion médias',     prio: 6  },
+  { cat: 'MediaApp-Books',   group: 'Gestion médias',     prio: 6  },
+  { cat: 'Backup',           group: 'Fichiers & Sync',    prio: 7  },
+  { cat: 'Cloud',            group: 'Fichiers & Sync',    prio: 7  },
+  { cat: 'HomeAutomation',   group: 'Domotique',          prio: 8  },
+  { cat: 'Network-Web',      group: 'Applications web',   prio: 9  },
+  { cat: 'AI',               group: 'Applications web',   prio: 9  },
+  { cat: 'Network-Management',group:'Monitoring',         prio: 10 },
+  { cat: 'Network-FTP',      group: 'Fichiers & Sync',    prio: 10 },
+  { cat: 'Network-Messenger',group: 'Applications web',   prio: 10 },
+  { cat: 'GameServers',      group: 'Outils',             prio: 11 },
+  { cat: 'Tools-System',     group: 'Outils',             prio: 12 },
+  // Catégories trop génériques : ignorees si seules (fallback CLASSIFY_RULES)
+  // Tools-Utilities, Productivity, Other, Network-Other -> pas de mapping direct
+];
+
+// Categories qui seules ne suffisent pas a classifier (trop generiques)
+var GENERIC_CATS = ['Tools-Utilities','Productivity','Other','Network-Other','Plugins'];
+
+function setAppfeedStatus(msg, state) {
+  var dot  = document.getElementById('appfeed-dot');
+  var text = document.getElementById('appfeed-text');
+  if (!dot || !text) return;
+  dot.className  = 'appfeed-dot' + (state === 'ready' ? ' ready' : state === 'loading' ? ' loading' : '');
+  text.textContent = 'AppFeed : ' + msg;
+
+  // Met a jour le bouton classifier selon l'etat AppFeed
+  var btnClassify = document.getElementById('btn-classify');
+  if (!btnClassify) return;
+  if (state === 'loading') {
+    btnClassify.title = t('js_appfeed_notready');
+    btnClassify.style.opacity = '0.6';
+  } else {
+    btnClassify.title = state === 'ready'
+      ? t('js_appfeed_ready')
+      : 'AppFeed indisponible — règles intégrées utilisées';
+    btnClassify.style.opacity = '1';
+  }
+}
+
+function buildAppfeedMaps(data) {
+  appfeedImageMap = {};
+  appfeedNameMap  = {};
+  if (!Array.isArray(data)) return;
+  data.forEach(function(app) {
+    var cats = app.CategoryList || [];
+    if (!cats.length) return;
+    var repo = (app.Repository || '').toLowerCase().split(':')[0];
+    var name = (app.Name || '').toLowerCase();
+    // Stocke la CategoryList (tableau) pour chaque repo et nom
+    if (repo) appfeedImageMap[repo] = cats;
+    if (name) appfeedNameMap[name]  = cats;
+  });
+  appfeedReady = true;
+}
+
+// ── IndexedDB cache (pas de limite de taille) ─────────────────
+var IDB_NAME    = 'unraid-appfeed';
+var IDB_STORE   = 'cache';
+var IDB_VERSION = 1;
+
+function idbOpen() {
+  return new Promise(function(resolve, reject) {
+    var req = indexedDB.open(IDB_NAME, IDB_VERSION);
+    req.onupgradeneeded = function(e) {
+      e.target.result.createObjectStore(IDB_STORE);
+    };
+    req.onsuccess = function(e) { resolve(e.target.result); };
+    req.onerror   = function(e) { reject(e.target.error); };
+  });
+}
+
+function idbGet(key) {
+  return idbOpen().then(function(db) {
+    return new Promise(function(resolve, reject) {
+      var tx  = db.transaction(IDB_STORE, 'readonly');
+      var req = tx.objectStore(IDB_STORE).get(key);
+      req.onsuccess = function(e) { resolve(e.target.result); };
+      req.onerror   = function(e) { reject(e.target.error); };
+    });
+  });
+}
+
+function idbSet(key, value) {
+  return idbOpen().then(function(db) {
+    return new Promise(function(resolve, reject) {
+      var tx  = db.transaction(IDB_STORE, 'readwrite');
+      var req = tx.objectStore(IDB_STORE).put(value, key);
+      req.onsuccess = function() { resolve(); };
+      req.onerror   = function(e) { reject(e.target.error); };
+    });
+  });
+}
+
+function loadAppfeed(forceRefresh) {
+  if (!forceRefresh) {
+    // Lecture depuis IndexedDB
+    Promise.all([idbGet('data'), idbGet('date')]).then(function(results) {
+      var data = results[0];
+      var date = results[1];
+      if (data && date) {
+        var age = Date.now() - date;
+        if (age < APPFEED_TTL) {
+          appfeedData = data;
+          buildAppfeedMaps(data);
+          var days  = Math.floor(age / 86400000);
+          var hours = Math.floor((age % 86400000) / 3600000);
+          var age_str = days > 0 ? days + 'j' : hours + 'h';
+          setAppfeedStatus(t('js_appfeed_cached')(data.length, age_str), 'ready');
+          return;
+        }
+      }
+      // Cache expire ou absent
+      fetchAndCacheAppfeed();
+    }).catch(function() {
+      fetchAndCacheAppfeed();
+    });
+  } else {
+    fetchAndCacheAppfeed();
+  }
+}
+
+function fetchAndCacheAppfeed() {
+  // Essai 1 : fichier local applicationFeed-raw.json dans le meme dossier
+  setAppfeedStatus(t('js_appfeed_search'), 'loading');
+  fetch('./applicationFeed-raw.json')
+    .then(function(r) {
+      if (!r.ok) throw new Error('local not found');
+      return r.json().then(function(data) { return { data: data, source: 'local' }; });
+    })
+    .catch(function() {
+      setAppfeedStatus(t('js_appfeed_dl'), 'loading');
+      return fetch(APPFEED_URL)
+        .then(function(r) {
+          if (!r.ok) throw new Error('HTTP ' + r.status);
+          return r.json().then(function(data) { return { data: data, source: 'github' }; });
+        });
+    })
+    .then(function(result) {
+      appfeedData = result.data;
+      buildAppfeedMaps(result.data);
+      if (result.source === 'local') {
+        setAppfeedStatus(t('js_appfeed_local')(result.data.length), 'ready');
+      } else {
+        Promise.all([idbSet('data', result.data), idbSet('date', Date.now())])
+          .then(function() {
+            setAppfeedStatus(t('js_appfeed_github')(result.data.length), 'ready');
+          })
+          .catch(function() {
+            setAppfeedStatus(t('js_appfeed_nocache')(result.data.length), 'ready');
+          });
+      }
+    })
+    .catch(function(err) {
+      setAppfeedStatus(t('js_appfeed_err')(err.message), '');
+    });
+}
+
+// Recherche le groupe d'une app depuis l'AppFeed (CategoryList)
+function getAppfeedGroup(name, image) {
+  if (!appfeedReady) return null;
+  var imgKey  = (image || '').toLowerCase().split(':')[0];
+  var nameKey = (name  || '').toLowerCase();
+  var imgShort = imgKey.split('/').pop();
+
+  // Trouve les CategoryList candidates
+  var catList = (
+    appfeedImageMap[imgKey]   ||
+    appfeedImageMap[imgShort] ||
+    appfeedNameMap[nameKey]   ||
+    null
+  );
+
+  if (!catList || !catList.length) return null;
+
+  // Filtre les catégories trop génériques
+  var meaningful = catList.filter(function(c) {
+    return GENERIC_CATS.indexOf(c) === -1;
+  });
+
+  // Si toutes les catégories sont génériques -> pas de classification AppFeed
+  // On laisse CLASSIFY_RULES decider (meilleur pour BDD, monitoring, etc.)
+  if (!meaningful.length) return null;
+
+  // Trouve le groupe avec la plus haute priorite (chiffre le plus bas)
+  var bestGroup = null;
+  var bestPrio  = 999;
+  meaningful.forEach(function(cat) {
+    CATEGORY_PRIORITY.forEach(function(rule) {
+      if (cat === rule.cat || cat.indexOf(rule.cat) === 0) {
+        if (rule.prio < bestPrio) {
+          bestPrio  = rule.prio;
+          bestGroup = rule.group;
+        }
+      }
+    });
+  });
+
+  return bestGroup; // null si aucune regle ne correspond
+}
+
+var CLASSIFY_RULES = [
+  // ── VPN & Réseau ─────────────────────────────────────────────
+  { pattern: /gluetun/i,                                 group: 'VPN / Réseau',        waitFor: true,  timeout: 60  },
+  { pattern: /wireguard/i,                               group: 'VPN / Réseau',        waitFor: true,  timeout: 60  },
+  { pattern: /tailscale/i,                               group: 'VPN / Réseau',        waitFor: true,  timeout: 60  },
+  { pattern: /openvpn/i,                                 group: 'VPN / Réseau',        waitFor: true,  timeout: 60  },
+  { pattern: /cloudflared|cloudflare.tunnel/i,           group: 'VPN / Réseau',        waitFor: false, timeout: 30  },
+
+  // ── DNS & AdBlock ─────────────────────────────────────────────
+  { pattern: /adguard|adguardhome/i,                     group: 'DNS & AdBlock',       waitFor: false, timeout: 30  },
+  { pattern: /pihole/i,                                  group: 'DNS & AdBlock',       waitFor: false, timeout: 30  },
+  { pattern: /unbound/i,                                 group: 'DNS & AdBlock',       waitFor: false, timeout: 30  },
+
+  // ── Proxy & SSL ───────────────────────────────────────────────
+  { pattern: /nginx-proxy-manager|nginxproxymanager/i,   group: 'Proxy & SSL',         waitFor: true,  timeout: 30  },
+  { pattern: /jlesage\/nginx/i,                          group: 'Proxy & SSL',         waitFor: true,  timeout: 30  },
+  { pattern: /traefik/i,                                 group: 'Proxy & SSL',         waitFor: true,  timeout: 30  },
+  { pattern: /caddy/i,                                   group: 'Proxy & SSL',         waitFor: true,  timeout: 30  },
+  { pattern: /^nginx$|linuxserver\/nginx/i,              group: 'Proxy & SSL',         waitFor: true,  timeout: 30  },
+  { pattern: /haproxy/i,                                 group: 'Proxy & SSL',         waitFor: true,  timeout: 30  },
+
+  // ── Bases de données ──────────────────────────────────────────
+  { pattern: /mariadb|mysql/i,                           group: 'Bases de données',    waitFor: true,  timeout: 45  },
+  { pattern: /postgres/i,                                group: 'Bases de données',    waitFor: true,  timeout: 35  },
+  { pattern: /redis/i,                                   group: 'Bases de données',    waitFor: true,  timeout: 20  },
+  { pattern: /mongo/i,                                   group: 'Bases de données',    waitFor: false, timeout: 30  },
+  { pattern: /influx/i,                                  group: 'Bases de données',    waitFor: false, timeout: 30  },
+  { pattern: /elasticsearch/i,                           group: 'Bases de données',    waitFor: false, timeout: 45  },
+  { pattern: /meilisearch/i,                             group: 'Bases de données',    waitFor: false, timeout: 30  },
+
+  // ── Authentification ──────────────────────────────────────────
+  { pattern: /authelia/i,                                group: 'Applications web',    waitFor: true,  timeout: 30  },
+  { pattern: /authentik/i,                               group: 'Applications web',    waitFor: true,  timeout: 30  },
+  { pattern: /keycloak/i,                                group: 'Applications web',    waitFor: true,  timeout: 45  },
+  { pattern: /lldap/i,                                   group: 'Applications web',    waitFor: false, timeout: 30  },
+
+  // ── Applications web ──────────────────────────────────────────
+  { pattern: /phpmyadmin/i,                              group: 'Applications web',    waitFor: false, timeout: 30  },
+  { pattern: /onlyoffice|documentserver/i,               group: 'Applications web',    waitFor: false, timeout: 30  },
+  { pattern: /nextcloud/i,                               group: 'Applications web',    waitFor: false, timeout: 30  },
+  { pattern: /vaultwarden|bitwarden/i,                   group: 'Applications web',    waitFor: false, timeout: 30  },
+  { pattern: /gitea|forgejo/i,                           group: 'Applications web',    waitFor: false, timeout: 30  },
+  { pattern: /paperless/i,                               group: 'Applications web',    waitFor: false, timeout: 30  },
+  { pattern: /homarr|heimdall|organizr|homepage|dasherr/i, group: 'Applications web', waitFor: false, timeout: 30  },
+  { pattern: /n8n/i,                                     group: 'Applications web',    waitFor: false, timeout: 30  },
+  { pattern: /activepieces/i,                            group: 'Applications web',    waitFor: false, timeout: 30  },
+  { pattern: /firefly/i,                                 group: 'Applications web',    waitFor: false, timeout: 30  },
+  { pattern: /actual/i,                                  group: 'Applications web',    waitFor: false, timeout: 30  },
+  { pattern: /wikijs|wiki\.js/i,                         group: 'Applications web',    waitFor: false, timeout: 30  },
+  { pattern: /freshrss|miniflux/i,                       group: 'Applications web',    waitFor: false, timeout: 30  },
+  { pattern: /mealie|grocy/i,                            group: 'Applications web',    waitFor: false, timeout: 30  },
+
+  // ── Monitoring ────────────────────────────────────────────────
+  { pattern: /glances|nicolargo/i,                       group: 'Monitoring',          waitFor: false, timeout: 30  },
+  { pattern: /grafana/i,                                 group: 'Monitoring',          waitFor: false, timeout: 30  },
+  { pattern: /prometheus/i,                              group: 'Monitoring',          waitFor: false, timeout: 30  },
+  { pattern: /uptime.kuma/i,                             group: 'Monitoring',          waitFor: false, timeout: 30  },
+  { pattern: /speedtest/i,                               group: 'Monitoring',          waitFor: false, timeout: 30  },
+  { pattern: /jellystat|cyfershepard/i,                  group: 'Monitoring',          waitFor: false, timeout: 30  },
+  { pattern: /netdata/i,                                 group: 'Monitoring',          waitFor: false, timeout: 30  },
+  { pattern: /scrutiny/i,                                group: 'Monitoring',          waitFor: false, timeout: 30  },
+  { pattern: /cockpit/i,                                 group: 'Monitoring',          waitFor: false, timeout: 30  },
+  { pattern: /loki/i,                                    group: 'Monitoring',          waitFor: false, timeout: 30  },
+  { pattern: /telegraf/i,                                group: 'Monitoring',          waitFor: false, timeout: 30  },
+
+  // ── Serveurs média ────────────────────────────────────────────
+  { pattern: /jellyfin/i,                                group: 'Serveurs média',      waitFor: false, timeout: 30  },
+  { pattern: /plex(?!-meta|-manage)/i,                   group: 'Serveurs média',      waitFor: false, timeout: 30  },
+  { pattern: /emby(?!badge)/i,                           group: 'Serveurs média',      waitFor: false, timeout: 30  },
+  { pattern: /audiobookshelf|advplyr/i,                  group: 'Serveurs média',      waitFor: false, timeout: 30  },
+  { pattern: /navidrome|deluan/i,                        group: 'Serveurs média',      waitFor: false, timeout: 30  },
+  { pattern: /kavita/i,                                  group: 'Serveurs média',      waitFor: false, timeout: 30  },
+  { pattern: /komga/i,                                   group: 'Serveurs média',      waitFor: false, timeout: 30  },
+  { pattern: /calibre/i,                                 group: 'Serveurs média',      waitFor: false, timeout: 30  },
+  { pattern: /immich/i,                                  group: 'Serveurs média',      waitFor: false, timeout: 30  },
+  { pattern: /photoprism/i,                              group: 'Serveurs média',      waitFor: false, timeout: 30  },
+  { pattern: /photoview/i,                               group: 'Serveurs média',      waitFor: false, timeout: 30  },
+  { pattern: /lychee/i,                                  group: 'Serveurs média',      waitFor: false, timeout: 30  },
+
+  // ── Gestion médias ────────────────────────────────────────────
+  { pattern: /unmanic|josh5/i,                           group: 'Gestion médias',      waitFor: false, timeout: 30  },
+  { pattern: /bazarr/i,                                  group: 'Gestion médias',      waitFor: false, timeout: 30  },
+  { pattern: /tdarr/i,                                   group: 'Gestion médias',      waitFor: false, timeout: 30  },
+  { pattern: /seerr|overseerr/i,                         group: 'Gestion médias',      waitFor: false, timeout: 30  },
+  { pattern: /plex-meta|plex.meta|pmm/i,                 group: 'Gestion médias',      waitFor: false, timeout: 30  },
+  { pattern: /mylar/i,                                   group: 'Gestion médias',      waitFor: false, timeout: 30  },
+  { pattern: /komf/i,                                    group: 'Gestion médias',      waitFor: false, timeout: 30  },
+
+  // ── Téléchargement ────────────────────────────────────────────
+  { pattern: /flaresolverr/i,                            group: 'Téléchargement',      waitFor: true,  timeout: 30  },
+  { pattern: /jackett|prowlarr|nzbhydra/i,               group: 'Téléchargement',      waitFor: false, timeout: 30  },
+  { pattern: /qbittorrent/i,                             group: 'Téléchargement',      waitFor: true,  timeout: 30  },
+  { pattern: /deluge/i,                                  group: 'Téléchargement',      waitFor: true,  timeout: 30  },
+  { pattern: /transmission/i,                            group: 'Téléchargement',      waitFor: true,  timeout: 30  },
+  { pattern: /rtorrent|rutorrent/i,                      group: 'Téléchargement',      waitFor: true,  timeout: 30  },
+  { pattern: /sabnzbd|nzbget/i,                          group: 'Téléchargement',      waitFor: false, timeout: 30  },
+  { pattern: /sonarr/i,                                  group: 'Téléchargement',      waitFor: false, timeout: 30  },
+  { pattern: /radarr/i,                                  group: 'Téléchargement',      waitFor: false, timeout: 30  },
+  { pattern: /lidarr/i,                                  group: 'Téléchargement',      waitFor: false, timeout: 30  },
+  { pattern: /readarr/i,                                 group: 'Téléchargement',      waitFor: false, timeout: 30  },
+  { pattern: /whisparr/i,                                group: 'Téléchargement',      waitFor: false, timeout: 30  },
+  { pattern: /cross.seed/i,                              group: 'Téléchargement',      waitFor: false, timeout: 30  },
+  { pattern: /qbit.manage|stuffanthings/i,               group: 'Téléchargement',      waitFor: false, timeout: 30  },
+
+  // ── Fichiers & Sync ───────────────────────────────────────────
+  { pattern: /filebrowser|unraides/i,                    group: 'Fichiers & Sync',     waitFor: false, timeout: 30  },
+  { pattern: /krusader|ich777/i,                         group: 'Fichiers & Sync',     waitFor: false, timeout: 30  },
+  { pattern: /syncthing|binhex.*syncthing/i,             group: 'Fichiers & Sync',     waitFor: false, timeout: 30  },
+  { pattern: /duplicati|borgmatic|restic/i,              group: 'Fichiers & Sync',     waitFor: false, timeout: 30  },
+  { pattern: /seafile/i,                                 group: 'Fichiers & Sync',     waitFor: false, timeout: 30  },
+  { pattern: /owncloud/i,                                group: 'Fichiers & Sync',     waitFor: false, timeout: 30  },
+
+  // ── Domotique ─────────────────────────────────────────────────
+  { pattern: /homeassistant|home-assistant/i,            group: 'Domotique',           waitFor: true,  timeout: 60  },
+  { pattern: /node.red/i,                                group: 'Domotique',           waitFor: false, timeout: 30  },
+  { pattern: /zigbee2mqtt|mosquitto/i,                   group: 'Domotique',           waitFor: false, timeout: 30  },
+  { pattern: /zwavejs|zwave/i,                           group: 'Domotique',           waitFor: false, timeout: 30  },
+  { pattern: /esphome/i,                                 group: 'Domotique',           waitFor: false, timeout: 30  },
+
+  // ── Outils ────────────────────────────────────────────────────
+  { pattern: /portainer/i,                               group: 'Outils',              waitFor: false, timeout: 30  },
+  { pattern: /dockge/i,                                  group: 'Outils',              waitFor: false, timeout: 30  },
+  { pattern: /watchtower/i,                              group: 'Outils',              waitFor: false, timeout: 30  },
+  { pattern: /diun/i,                                    group: 'Outils',              waitFor: false, timeout: 30  },
+  { pattern: /shawly\/nut|docker-nut/i,                  group: 'Outils',              waitFor: false, timeout: 30  },
+  { pattern: /linuxserver\/firefox|^firefox$/i,          group: 'Outils',              waitFor: false, timeout: 30  },
+  { pattern: /linuxserver\/orcaslicer|orcaslicer/i,      group: 'Outils',              waitFor: false, timeout: 30  },
+  { pattern: /code-server|vscode/i,                      group: 'Outils',              waitFor: false, timeout: 30  },
+];
+
+// Group priority order (determines script execution order)
+// Ordre canonique de demarrage — immuable
+// Chaque groupe herite d'une priorité qui sera respectée à la génération
+var GROUP_ORDER = [
+  'VPN / Réseau',       // 1. Reseau securise en premier, toujours
+  'DNS & AdBlock',      // 2. Resolution DNS fiable avant tout service web
+  'Bases de données',   // 3. Donnees disponibles avant les applis
+  'Proxy & SSL',        // 4. Exposition web prete avant les applis
+  'Applications web',   // 5. Applis web (dependent BDD + proxy)
+  'Monitoring',         // 6. Surveillance (depend BDD)
+  'Serveurs média',     // 7. Streaming (independant)
+  'Gestion médias',     // 8. Traitement (depend serveurs media)
+  'Téléchargement',     // 9. Tout le groupe passe par VPN
+  'Fichiers & Sync',    // 10. Sync (independant)
+  'Domotique',          // 11. Domotique (independant)
+  'Outils',             // 12. Outils divers
+  t('js_unclassified')         // 13. Non reconnus — a trier manuellement
+];
+
+// Priorité de groupe pour tri à la génération (index = priorite)
+function getGroupPriority(groupName) {
+  var name = groupName.toLowerCase();
+  if (/vpn|reseau|gluetun/i.test(name))        return 0;
+  if (/dns|adblock|adguard/i.test(name))        return 1;
+  if (/base|donnee|database|bdd/i.test(name))   return 2;
+  if (/proxy|ssl|nginx/i.test(name))            return 3;
+  if (/web|appli/i.test(name))                  return 4;
+  if (/monitor|dashboard/i.test(name))          return 5;
+  if (/media.*serv|serv.*media|jellyfin/i.test(name)) return 6;
+  if (/gestion.*media|media.*gest/i.test(name)) return 7;
+  if (/telecharg|download/i.test(name))         return 8;
+  if (/fichier|sync|backup/i.test(name))        return 9;
+  if (/domotique|home.*auto/i.test(name))       return 10;
+  if (/outil|tool/i.test(name))                 return 11;
+  return 99;
+}
+
+
+// ================================================================
+// DEPENDENCY ENGINE
+// Applique automatiquement wait_for, timeouts et ordre dans les groupes
+// ================================================================
+
+// Conteneurs qui nécessitent toujours un wait_for
+var ALWAYS_WAIT_FOR = [
+  { pattern: /gluetun|wireguard/i,        timeout: 60 },
+  { pattern: /mariadb|mysql/i,            timeout: 45 },
+  { pattern: /postgres/i,                 timeout: 35 },
+  { pattern: /^redis$/i,                  timeout: 20 },
+  { pattern: /nginxproxymanager/i,        timeout: 30 },
+  { pattern: /^nginx$/i,                  timeout: 20 },
+  { pattern: /flaresolverr/i,             timeout: 30 },
+  { pattern: /jackett|prowlarr|nzbhydra|indexarr/i, timeout: 20 },
+  { pattern: /qbittorrent/i,              timeout: 30 },
+  { pattern: /homeassistant/i,            timeout: 60 },
+];
+
+// Pauses intelligentes par type de groupe
+var GROUP_PAUSES = {
+  'VPN / Réseau':      10,
+  'DNS & AdBlock':      5,
+  'Bases de données':  10,
+  'Proxy & SSL':        5,
+  'Applications web':   5,
+  'Monitoring':         5,
+  'Serveurs média':     5,
+  'Gestion médias':     5,
+  'Téléchargement':     5,
+  'Fichiers & Sync':    5,
+  'Domotique':          5,
+  'Outils':             0,
+  'Non classes':        5,
+};
+
+// Regles d'ordre intra-groupe : {name} doit venir apres {after}
+var ORDER_RULES = [
+  // Téléchargement : ordre strict
+  // 1. Resolveurs (flaresolverr) en premier
+  { name: /jackett|prowlarr|nzbhydra|indexarr/i, after: /flaresolverr/i,    forceWaitAfter: true },
+  // 2. Indexeurs avant les gestionnaires de media
+  { name: /sonarr|radarr|lidarr|readarr|bazarr/i, after: /jackett|prowlarr|nzbhydra|indexarr/i, forceWaitAfter: false },
+  // 3. Clients torrent/usenet avant sonarr/radarr
+  { name: /sonarr|radarr|lidarr|readarr/i, after: /qbittorrent|sabnzbd|nzbget|deluge|transmission/i, forceWaitAfter: false },
+  // 4. Outils dependants du client torrent en dernier
+  { name: /cross.seed/i,                   after: /qbittorrent|deluge|transmission/i, forceWaitAfter: false },
+  { name: /qbit.manage/i,                  after: /qbittorrent/i,           forceWaitAfter: false },
+  // Proxy : nginx avant NPM
+  { name: /nginxproxymanager/i,            after: /^nginx$/,                forceWaitAfter: true },
+  // Monitoring : jellystat apres postgresql
+  { name: /jellystat/i,                    after: /postgres/i,              forceWaitAfter: false },
+  // Web : phpmyadmin apres mariadb (meme groupe si present)
+  { name: /phpmyadmin/i,                   after: /mariadb/i,               forceWaitAfter: false },
+];
+
+function applyDependencyRules() {
+  groups.forEach(function(group) {
+
+    // 1. Pause intelligente selon le nom du groupe
+    Object.keys(GROUP_PAUSES).forEach(function(key) {
+      if (group.name.toLowerCase().indexOf(key.toLowerCase()) !== -1 ||
+          key.toLowerCase().indexOf(group.name.toLowerCase()) !== -1) {
+        group.pause = GROUP_PAUSES[key];
+      }
+    });
+
+    // 2. wait_for automatique sur les conteneurs critiques
+    group.containers.forEach(function(c) {
+      ALWAYS_WAIT_FOR.forEach(function(rule) {
+        if (rule.pattern.test(c.name)) {
+          c.waitFor = true;
+          c.timeout = rule.timeout;
+        }
+      });
+    });
+
+    // 3. Reordonne les conteneurs selon les dependances intra-groupe
+    var names = group.containers.map(function(c){ return c.name; });
+    var visited = {};
+    var order = [];
+
+    function visit(name) {
+      if (visited[name]) return;
+      visited[name] = true;
+      // Ce conteneur doit-il venir apres un autre dans ce groupe ?
+      ORDER_RULES.forEach(function(rule) {
+        if (rule.name.test(name)) {
+          names.forEach(function(n) {
+            if (rule.after.test(n)) visit(n);
+          });
+        }
+      });
+      order.push(name);
+    }
+
+    names.forEach(function(n) { visit(n); });
+
+    // Reconstruit le tableau dans le bon ordre
+    var reordered = [];
+    order.forEach(function(name) {
+      var c = group.containers.find(function(x){ return x.name === name; });
+      if (c) reordered.push(c);
+    });
+    group.containers.forEach(function(c) {
+      if (!reordered.find(function(x){ return x.name === c.name; })) reordered.push(c);
+    });
+    group.containers = reordered;
+
+    // 4. Si un conteneur doit venir apres un wait_for, force le wait_for sur le precedent
+    ORDER_RULES.forEach(function(rule) {
+      if (!rule.forceWaitAfter) return;
+      group.containers.forEach(function(c, i) {
+        if (rule.name.test(c.name)) {
+          for (var j = 0; j < i; j++) {
+            if (rule.after.test(group.containers[j].name)) {
+              group.containers[j].waitFor = true;
+            }
+          }
+        }
+      });
+    });
+  });
+}
+
+function classifyContainers() {
+  if (!importedNames.length) return;
+
+  // Avertir si AppFeed pas encore pret
+  if (!appfeedReady) {
+    var result = document.getElementById('classify-result');
+    if (result) {
+      result.innerHTML = '<span style="color:#f39c12">' + t('js_appfeed_warn').replace('\n','<br>') + '</span>';
+      result.style.display = 'block';
+    }
+  }
+
+  // Use images captured at import time
+  var classified = {}; // groupName -> [{name, waitFor, timeout}]
+  var resultLines = [];
+  var afCount = 0;   // nb classes via AppFeed
+  var rulesCount = 0; // nb classes via regles integrees
+
+  importedNames.forEach(function(name) {
+    var image = importedImages[name] || '';
+    var matched = false;
+    var isDisabledByDefault = /orcaslicer|^nut$|shawly\/nut|docker-nut/i.test(name);
+    var cleanName = name.trim().split(/\s+/)[0];
+
+    // 1. Regles integrees en priorite (apps connues, BDD, monitoring, proxy...)
+    for (var i = 0; i < CLASSIFY_RULES.length; i++) {
+      var rule = CLASSIFY_RULES[i];
+      if (rule.pattern.test(name) || rule.pattern.test(image)) {
+        var gname = rule.group;
+        if (!classified[gname]) classified[gname] = [];
+        classified[gname].push({ name: cleanName, waitFor: rule.waitFor, timeout: rule.timeout, enabled: !isDisabledByDefault });
+        resultLines.push('<span class="cr-ok">✓</span> <span class="cr-group">' + tGroup(gname) + '</span> ← ' + name + (image ? ' <span style="color:#3a3f50">(' + image.split('/').pop().split(':')[0] + ')</span>' : ''));
+        rulesCount++;
+        matched = true;
+        break;
+      }
+    }
+
+    // 2. AppFeed pour les apps inconnues des règles intégrées
+    if (!matched && appfeedReady) {
+      var afGroup = getAppfeedGroup(name, image);
+      if (afGroup) {
+        if (!classified[afGroup]) classified[afGroup] = [];
+        classified[afGroup].push({ name: cleanName, waitFor: false, timeout: 30, enabled: !isDisabledByDefault });
+        resultLines.push('<span class="cr-ok">✓</span> <span class="cr-group">' + tGroup(afGroup) + '</span> ← ' + name + ' <span style="color:#f39c12">(AppFeed)</span>');
+        matched = true;
+        afCount++;
+      }
+    }
+    if (!matched) {
+      if (!classified[t('js_unclassified')]) classified[t('js_unclassified')] = [];
+      classified[t('js_unclassified')].push({ name: cleanName, waitFor: false, timeout: 30, enabled: true });
+      resultLines.push('<span class="cr-skip">?</span> <span style="color:var(--muted)">Non classe</span> ← ' + name);
+    }
+  });
+
+  // Clear existing groups and pool
+  groups = [];
+  pool = [];
+
+  // Create groups in defined order
+  GROUP_ORDER.forEach(function(gname) {
+    if (classified[gname] && classified[gname].length > 0) {
+      groups.push({
+        name: gname,
+        pause: GROUP_PAUSES[gname] !== undefined ? GROUP_PAUSES[gname] : 5,
+        containers: classified[gname]
+      });
+    }
+  });
+
+  // Apply smart dependency ordering within each group
+  applyDependencyRules();
+
+  render();
+  renderPool();
+
+  // Stats AppFeed vs regles
+  resultLines.unshift(
+    '<span style="color:var(--muted);font-size:10px">' +
+    (appfeedReady
+      ? t('js_appfeed_count')(afCount, rulesCount)
+      : t('js_appfeed_norules')(rulesCount)) +
+    '</span><br>'
+  );
+
+  // Show result
+  var el = document.getElementById('classify-result');
+  el.innerHTML = '<strong style="color:var(--blue)">' + t('js_classify_done') + '</strong><br>' + resultLines.join('<br>');
+  el.classList.add('visible');
+}
+
+document.getElementById('btn-classify').addEventListener('click', classifyContainers);
+document.getElementById('btn-appfeed-refresh').addEventListener('click', function() {
+  appfeedReady = false;
+  appfeedData  = null;
+  loadAppfeed(true);
+});
+document.getElementById('btn-appfeed-clear').addEventListener('click', function() {
+  idbOpen().then(function(db) {
+    var tx = db.transaction('cache', 'readwrite');
+    tx.objectStore('cache').clear();
+    tx.oncomplete = function() {
+      setAppfeedStatus(t('js_cache_clear'), 'loading');
+      setTimeout(function() { loadAppfeed(true); }, 300);
+    };
+  }).catch(function() {
+    setAppfeedStatus(t('js_cache_err'), '');
+  });
+});
+
+// Charge l'AppFeed au démarrage
+loadAppfeed(false);
+
+
+// ── Wiring ────────────────────────────────────────────────────
+document.getElementById('btn-copy-cmd').addEventListener('click', function() {
+  var cmd = document.getElementById('ssh-cmd').textContent;
+  navigator.clipboard.writeText(cmd).then(function() {
+    var btn = document.getElementById('btn-copy-cmd');
+    btn.textContent = 'Copie !';
+    btn.classList.add('copied');
+    setTimeout(function(){ btn.textContent = 'Copier'; btn.classList.remove('copied'); }, 2000);
+  });
+});
+document.getElementById('btn-copy-cmd').addEventListener('click', function() {
+  var cmd = document.getElementById('ssh-cmd').textContent;
+  navigator.clipboard.writeText(cmd).then(function() {
+    var btn = document.getElementById('btn-copy-cmd');
+    btn.textContent = 'Copie !';
+    btn.classList.add('copied');
+    setTimeout(function(){ btn.textContent = '\u2398 Copier'; btn.classList.remove('copied'); }, 2000);
+  });
+});
+document.getElementById('btn-add-group').addEventListener('click', addGroup);
+document.getElementById('btn-generate').addEventListener('click', generateScript);
+document.getElementById('copy-btn').addEventListener('click', copyScript);
+
+// ── Init ─────────────────────────────────────────────────────
+document.getElementById('lang-select').addEventListener('change', function() {
+  setLang(this.value);
+});
+
+// Apply saved language on load
+applyI18n();
+render();
+renderPool();
+</script>
+</body>
+</html>
