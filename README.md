@@ -87,7 +87,7 @@ Les idées sont les bienvenues ! N'hésitez pas à ouvrir une Issue ou une Pull 
 
     🛠️ Développement : HTML5, CSS3 (variables modernes), JS Vanilla.
 
-    ☕ Soutien : Si cet outil vous simplifie la vie, vous pouvez m'offrir un café sur Ko-fi.
+☕ Soutien : Si cet outil vous simplifie la vie, vous pouvez [payer un café sur Ko-fi](https://ko-fi.com/cbh17000) !.
 
 <p align="center">
 <i>Développé avec ❤️ pour la communauté Unraid.</i>
