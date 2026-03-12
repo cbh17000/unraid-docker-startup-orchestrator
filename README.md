@@ -83,3 +83,6 @@ Ce projet est distribué sous licence **MIT**. Voir le fichier `LICENSE` pour pl
 ---
 *Développé avec ❤️ pour simplifier la vie des administrateurs Unraid.*# unraid-docker-startup-orchestrator
 Unraid Docker Startup Orchestrator
+
+---
+☕ **Si cet outil vous fait gagner du temps, n'hésitez pas à me [payer un café sur Ko-fi](https://ko-fi.com/cbh17000) !**
