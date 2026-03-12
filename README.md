@@ -19,12 +19,21 @@ Unraid Docker Startup Orchestrator est une solution web élégante pour remplace
     La solution : Une orchestration basée sur des vérifications d'état réelles (running) et une hiérarchie logique.
 
 ✨ Points Forts
-Fonctionnalité,Description
+
+Fonctionnalité et Description
+
 🔍 wait_for Intelligent,Vérifie via l'API Docker si le conteneur est réellement opérationnel avant de continuer.
+
 🛡️ Idempotence,Détection automatique des conteneurs déjà actifs pour éviter les erreurs de doublons.
+
 📋 Logs de Production,Suivi en temps réel et historique dans /tmp/docker_start_order.log.
+
 🌐 Intégration AppFeed,Récupère les icônes et infos directement depuis Community Applications.
+
 🔒 100% Privé,Traitement local dans votre navigateur. Aucune donnée ne quitte votre réseau.
+
+
+🏗️ Logique de Démarrage
 
 Voici comment le script organise la survie de vos services après un redémarrage :
 Extrait de code
