@@ -19,27 +19,26 @@ Unraid Docker Startup Orchestrator est une solution web élégante pour remplace
     La solution : Une orchestration basée sur des vérifications d'état réelles (running) et une hiérarchie logique.
 
 ✨ Points Forts
-Fonctionnalité	Description
-🔍 wait_for Intelligent	Vérifie via l'API Docker si le conteneur est réellement opérationnel avant de continuer.
-🛡️ Idempotence	Détection automatique des conteneurs déjà actifs pour éviter les erreurs de doublons.
-📋 Logs de Production	Suivi en temps réel et historique dans /tmp/docker_start_order.log.
-🌐 Intégration AppFeed	Récupère les icônes et infos directement depuis Community Applications.
-🔒 100% Privé	Traitement local dans votre navigateur. Aucune donnée ne quitte votre réseau.
-🏗️ Logique de Démarrage
+Fonctionnalité,Description
+🔍 wait_for Intelligent,Vérifie via l'API Docker si le conteneur est réellement opérationnel avant de continuer.
+🛡️ Idempotence,Détection automatique des conteneurs déjà actifs pour éviter les erreurs de doublons.
+📋 Logs de Production,Suivi en temps réel et historique dans /tmp/docker_start_order.log.
+🌐 Intégration AppFeed,Récupère les icônes et infos directement depuis Community Applications.
+🔒 100% Privé,Traitement local dans votre navigateur. Aucune donnée ne quitte votre réseau.
 
 Voici comment le script organise la survie de vos services après un redémarrage :
 Extrait de code
 
-graph TD
-    A[Démarrage Array Unraid] --> B{Groupe 1: Réseau}
-    B -->|OK| C[VPN / DNS / AdGuard]
-    C --> D{Groupe 2: Data}
-    D -->|Wait for Running| E[MariaDB / Postgres / Redis]
-    E --> F{Groupe 3: Proxy}
-    F -->|OK| G[Nginx Proxy Manager]
-    G --> H[Groupe 4: Applications Web]
-    H --> I[Groupe 5: Médias & Téléchargement]
-    I --> J[✅ Système Opérationnel]
+    graph TD
+        A[Démarrage Array Unraid] --> B{Groupe 1: Réseau}
+        B -->|OK| C[VPN / DNS / AdGuard]
+        C --> D{Groupe 2: Data}
+        D -->|Wait for Running| E[MariaDB / Postgres / Redis]
+        E --> F{Groupe 3: Proxy}
+        F -->|OK| G[Nginx Proxy Manager]
+        G --> H[Groupe 4: Applications Web]
+        H --> I[Groupe 5: Médias & Téléchargement]
+        I --> J[✅ Système Opérationnel]
 
 🛠️ Installation Rapide
 1. Générer le script
@@ -65,21 +64,21 @@ graph TD
 Vous pouvez surveiller le bon déroulement du script directement depuis votre terminal Unraid :
 Bash
 
-# Pour voir le démarrage en temps réel
-tail -f /tmp/docker_start_order.log
+    # Pour voir le démarrage en temps réel
+    tail -f /tmp/docker_start_order.log
 
 💾 Structure de Sauvegarde (JSON)
 
 L'outil vous permet d'exporter votre configuration. Voici à quoi ressemble un bloc de configuration type :
 JSON
 
-{
-  "name": "Bases de données",
-  "pause": 10,
-  "containers": [
-    { "id": "mariadb", "waitFor": true, "timeout": 45 }
-  ]
-}
+    {
+      "name": "Bases de données",
+      "pause": 10,
+      "containers": [
+        { "id": "mariadb", "waitFor": true, "timeout": 45 }
+      ]
+    }
 
 🤝 Contribution & Support
 
