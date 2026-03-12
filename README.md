@@ -7,6 +7,13 @@
 
 Fini les délais (`sleep`) arbitraires. Assurez-vous que votre base de données ou votre VPN est **réellement opérationnel** avant de lancer vos applications dépendantes.
 
+
+## 📋 Prérequis
+
+- Unraid 6.x ou supérieur.
+- Plugin **User Scripts** (indispensable).
+- Les conteneurs doivent être nommés correctement (le script utilise les noms Docker standard).
+
 ---
 
 ## ✨ Points Forts
@@ -47,13 +54,6 @@ L'outil permet de sauvegarder votre travail. Le fichier `config.json` suit une s
 
 ---
 
-## 📋 Prérequis
-
-- Unraid 6.x ou supérieur.
-- Plugin **User Scripts** (recommandé).
-- Les conteneurs doivent être nommés correctement (le script utilise les noms Docker standard).
-
----
 
 ## 🤝 Contribution
 
