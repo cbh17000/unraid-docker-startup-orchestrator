@@ -225,10 +225,6 @@
         <span class="appfeed-text" id="appfeed-text">AppFeed : non charge</span>
         <button class="btn-appfeed-refresh" id="btn-appfeed-refresh"><span data-i18n="btn_appfeed_refresh">&#8635; Mettre à jour</span></button><button class="btn-appfeed-refresh" id="btn-appfeed-clear" title="Vider le cache IndexedDB" style="margin-left:6px;opacity:0.6"><span data-i18n="btn_appfeed_clear">&#128465; Vider cache</span></button>
       </div>
-      <div class="classify-bar">
-        <button class="btn-classify" id="btn-classify" disabled><span data-i18n="btn_classify">&#9889; Classifier automatiquement et créer les groupes</span></button>
-        <div class="classify-result" id="classify-result"></div>
-      </div>
     </div>
     <button class="btn-import" id="btn-import"><span data-i18n="btn_import">Importer</span></button>
   </div>
@@ -240,6 +236,10 @@
   <div class="pool-box" id="pool-box">
     <span class="pool-empty" id="pool-empty">Aucun conteneur — utilisez l'import ci-dessus ou ajoutez manuellement dans un groupe.</span>
   </div>
+  <div class="classify-bar">
+    <button class="btn-classify" id="btn-classify" disabled><span data-i18n="btn_classify">&#9889; Classifier automatiquement et créer les groupes</span></button>
+    <div class="classify-result" id="classify-result"></div>
+  </div>
 </div>
 
 <div class="section-title" data-i18n="section_groups">Groupes &amp; ordre de démarrage</div>
@@ -248,38 +248,13 @@
 <div id="groups-container"></div>
 
 <div class="tpl-bar">
-  <select class="tpl-select" id="tpl-select">
-    <option value="" data-i18n-opt="tpl_choose">-- Choisir un modele de groupe --</option>
-    <optgroup label="Infrastructures réseau">
-      <option value="vpn">VPN / Accès réseau</option>
-      <option value="dns">DNS &amp; AdBlock</option>
-      <option value="proxy">Proxy inverse &amp; SSL</option>
-    </optgroup>
-    <optgroup label="Services web">
-      <option value="databases">Bases de données</option>
-      <option value="webapps">Applications web</option>
-      <option value="monitoring">Monitoring &amp; Dashboard</option>
-    </optgroup>
-    <optgroup label="Médias">
-      <option value="media_server">Serveurs média</option>
-      <option value="media_dl">Téléchargement</option>
-      <option value="media_manage">Gestion des médias</option>
-    </optgroup>
-    <optgroup label="Domotique &amp; Divers">
-      <option value="homeauto">Domotique</option>
-      <option value="documents">Documents &amp; Fichiers</option>
-      <option value="games">Jeux &amp; Gaming</option>
-      <option value="dev">Developpement</option>
-      <option value="backup">Sauvegarde &amp; Sync</option>
-      <option value="empty">Groupe vide (personnalise)</option>
-    </optgroup>
-  </select>
+  <select class="tpl-select" id="tpl-select"></select>
   <button class="btn-tpl-add" id="btn-tpl-add"><span data-i18n="btn_tpl_add">+ Ajouter ce groupe</span></button>
 </div>
 <div class="tpl-desc" id="tpl-desc"></div>
 <div style="height:8px"></div>
 <button class="btn-add-group" id="btn-add-group"><span data-i18n="btn_add_group">+ Ajouter un groupe vide</span></button>
-</div><div class="section-title" data-i18n="section_config">Configuration</div>
+</div><div class="section-title" data-i18n="section_config">Export / Import</div>
 <div class="config-bar">
   <button id="btn-export" onclick="exportConfig()">⬇ <span data-i18n="btn_export">Exporter</span></button>
   <label class="btn-like" id="btn-import-label">
@@ -364,7 +339,7 @@ var TRANSLATIONS = {
     guide_step2:        "Etape 2 — Organiser les groupes",
     guide_step3:        "Etape 3 — Assigner les conteneurs",
     guide_step4:        "Etape 4 — Configurer wait_for et les delais",
-    section_config: "Configuration",
+    section_config: "Export / Import",
     btn_export: "Exporter la config",
     btn_import_config: "Importer une config",
     js_export_ok: "Configuration exportee.",
@@ -438,7 +413,7 @@ var TRANSLATIONS = {
     guide_step2:        "Step 2 — Organize groups",
     guide_step3:        "Step 3 — Assign containers",
     guide_step4:        "Step 4 — Configure wait_for and delays",
-    section_config: "Configuration",
+    section_config: "Export / Import",
     btn_export: "Export config",
     btn_import_config: "Import config",
     js_export_ok: "Configuration exported.",
@@ -512,7 +487,7 @@ var TRANSLATIONS = {
     guide_step2:        "Paso 2 — Organizar grupos",
     guide_step3:        "Paso 3 — Asignar contenedores",
     guide_step4:        "Paso 4 — Configurar wait_for y retardos",
-    section_config: "Configuracion",
+    section_config: "Export / Import",
     btn_export: "Exportar config",
     btn_import_config: "Importar config",
     js_export_ok: "Configuracion exportada.",
@@ -586,7 +561,7 @@ var TRANSLATIONS = {
     guide_step2:        "Schritt 2 — Gruppen organisieren",
     guide_step3:        "Schritt 3 — Container zuweisen",
     guide_step4:        "Schritt 4 — wait_for und Verzoegerungen konfigurieren",
-    section_config: "Konfiguration",
+    section_config: "Export / Import",
     btn_export: "Konfig exportieren",
     btn_import_config: "Konfig importieren",
     js_export_ok: "Konfiguration exportiert.",
@@ -744,6 +719,147 @@ function renderGuide() {
   el.innerHTML = html;
 }
 
+
+// ── Template select dropdown (multilingual) ──────────────────
+var TPL_SELECT_CONTENT = {
+  fr: {
+    placeholder: "-- Choisir un modele de groupe --",
+    groups: [
+      { label: "Infrastructures reseau", options: [
+        { value: "vpn",          text: "VPN / Acces reseau" },
+        { value: "dns",          text: "DNS & AdBlock" },
+        { value: "proxy",        text: "Proxy inverse & SSL" }
+      ]},
+      { label: "Services web", options: [
+        { value: "databases",    text: "Bases de donnees" },
+        { value: "webapps",      text: "Applications web" },
+        { value: "monitoring",   text: "Monitoring & Dashboard" }
+      ]},
+      { label: "Medias", options: [
+        { value: "media_server", text: "Serveurs media" },
+        { value: "media_dl",     text: "Telechargement" },
+        { value: "media_manage", text: "Gestion des medias" }
+      ]},
+      { label: "Domotique & Divers", options: [
+        { value: "homeauto",     text: "Domotique" },
+        { value: "documents",    text: "Documents & Fichiers" },
+        { value: "games",        text: "Jeux & Gaming" },
+        { value: "dev",          text: "Developpement" },
+        { value: "backup",       text: "Sauvegarde & Sync" },
+        { value: "empty",        text: "Groupe vide (personnalise)" }
+      ]}
+    ]
+  },
+  en: {
+    placeholder: "-- Choose a group template --",
+    groups: [
+      { label: "Network infrastructure", options: [
+        { value: "vpn",          text: "VPN / Network access" },
+        { value: "dns",          text: "DNS & AdBlock" },
+        { value: "proxy",        text: "Reverse Proxy & SSL" }
+      ]},
+      { label: "Web services", options: [
+        { value: "databases",    text: "Databases" },
+        { value: "webapps",      text: "Web Applications" },
+        { value: "monitoring",   text: "Monitoring & Dashboard" }
+      ]},
+      { label: "Media", options: [
+        { value: "media_server", text: "Media Servers" },
+        { value: "media_dl",     text: "Downloads" },
+        { value: "media_manage", text: "Media Management" }
+      ]},
+      { label: "Home automation & Misc", options: [
+        { value: "homeauto",     text: "Home Automation" },
+        { value: "documents",    text: "Documents & Files" },
+        { value: "games",        text: "Games & Gaming" },
+        { value: "dev",          text: "Development" },
+        { value: "backup",       text: "Backup & Sync" },
+        { value: "empty",        text: "Empty group (custom)" }
+      ]}
+    ]
+  },
+  es: {
+    placeholder: "-- Elegir una plantilla de grupo --",
+    groups: [
+      { label: "Infraestructura de red", options: [
+        { value: "vpn",          text: "VPN / Acceso a red" },
+        { value: "dns",          text: "DNS & AdBlock" },
+        { value: "proxy",        text: "Proxy inverso & SSL" }
+      ]},
+      { label: "Servicios web", options: [
+        { value: "databases",    text: "Bases de datos" },
+        { value: "webapps",      text: "Aplicaciones web" },
+        { value: "monitoring",   text: "Monitorizacion & Dashboard" }
+      ]},
+      { label: "Multimedia", options: [
+        { value: "media_server", text: "Servidores multimedia" },
+        { value: "media_dl",     text: "Descargas" },
+        { value: "media_manage", text: "Gestion multimedia" }
+      ]},
+      { label: "Domotica & Varios", options: [
+        { value: "homeauto",     text: "Domotica" },
+        { value: "documents",    text: "Documentos & Archivos" },
+        { value: "games",        text: "Juegos & Gaming" },
+        { value: "dev",          text: "Desarrollo" },
+        { value: "backup",       text: "Copia de seguridad & Sync" },
+        { value: "empty",        text: "Grupo vacio (personalizado)" }
+      ]}
+    ]
+  },
+  de: {
+    placeholder: "-- Gruppenvorlage auswaehlen --",
+    groups: [
+      { label: "Netzwerkinfrastruktur", options: [
+        { value: "vpn",          text: "VPN / Netzwerkzugang" },
+        { value: "dns",          text: "DNS & AdBlock" },
+        { value: "proxy",        text: "Reverse Proxy & SSL" }
+      ]},
+      { label: "Webdienste", options: [
+        { value: "databases",    text: "Datenbanken" },
+        { value: "webapps",      text: "Webanwendungen" },
+        { value: "monitoring",   text: "Monitoring & Dashboard" }
+      ]},
+      { label: "Medien", options: [
+        { value: "media_server", text: "Medienserver" },
+        { value: "media_dl",     text: "Downloads" },
+        { value: "media_manage", text: "Medienverwaltung" }
+      ]},
+      { label: "Heimautomatisierung & Sonstiges", options: [
+        { value: "homeauto",     text: "Heimautomatisierung" },
+        { value: "documents",    text: "Dokumente & Dateien" },
+        { value: "games",        text: "Spiele & Gaming" },
+        { value: "dev",          text: "Entwicklung" },
+        { value: "backup",       text: "Sicherung & Sync" },
+        { value: "empty",        text: "Leere Gruppe (benutzerdefiniert)" }
+      ]}
+    ]
+  }
+};
+
+function renderTplSelect() {
+  var sel = document.getElementById('tpl-select');
+  if (!sel) return;
+  var current = sel.value;
+  var content = TPL_SELECT_CONTENT[currentLang] || TPL_SELECT_CONTENT['fr'];
+  sel.innerHTML = '';
+  var def = document.createElement('option');
+  def.value = '';
+  def.textContent = content.placeholder;
+  sel.appendChild(def);
+  content.groups.forEach(function(g) {
+    var og = document.createElement('optgroup');
+    og.label = g.label;
+    g.options.forEach(function(o) {
+      var opt = document.createElement('option');
+      opt.value = o.value;
+      opt.textContent = o.text;
+      if (o.value === current) opt.selected = true;
+      og.appendChild(opt);
+    });
+    sel.appendChild(og);
+  });
+}
+
 function applyI18n() {
   var lang = TRANSLATIONS[currentLang] || TRANSLATIONS['fr'];
   // Static elements with data-i18n
@@ -766,6 +882,7 @@ function applyI18n() {
   if (typeof renderPool === 'function') renderPool();
   if (typeof render === 'function') render();
   renderGuide();
+  renderTplSelect();
 }
 
 function setLang(lang) {
