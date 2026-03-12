@@ -30,7 +30,7 @@ Fini les délais (`sleep`) arbitraires. Assurez-vous que votre base de données 
 ## 🛠️ Installation et Utilisation
 
 ### 1. Générer votre script
-1. Accédez à l'interface via [GitHub Pages](LIEN_VERS_TA_PAGE_ICI).
+1. Accédez à l'interface via [GitHub Pages](https://cbh17000.github.io/unraid-docker-startup-orchestrator/).
 2. Organisez vos conteneurs par groupes (Réseau, BDD, Apps, etc.).
 3. Configurez les options `Wait for` et les délais de pause.
 4. Cliquez sur **Générer le script**.
