@@ -1,18 +1,30 @@
-# Build and Release Folders
-bin-debug/
-bin-release/
-[Oo]bj/
-[Bb]in/
+# === Unraid Docker Startup Orchestrator - GitIgnore ===
 
-# Other files and folders
-.settings/
+# --- Sécurité & Confidentialité ---
+# On ignore tous les fichiers JSON car ils contiennent les configs utilisateurs
+*.json
+# Si tu décides plus tard d'inclure un exemple précis, 
+# tu pourras ajouter une ligne : !exemple.json
 
-# Executables
-*.swf
-*.air
-*.ipa
-*.apk
+# --- Logs & Debug ---
+# On ne veut pas envoyer les fichiers de log générés localement
+*.log
 
-# Project files, i.e. `.project`, `.actionScriptProperties` and `.flexProperties`
-# should NOT be excluded as they contain compiler settings and other important
-# information for Eclipse / Flash Builder.
+# --- Système (Windows, Mac, Linux) ---
+.DS_Store
+Thumbs.db
+desktop.ini
+.directory
+
+# --- Éditeurs de texte & IDE ---
+# Paramètres propres à ton éditeur (VS Code, Sublime, etc.)
+.vscode/
+.idea/
+*.sublime-project
+*.sublime-workspace
+.project
+
+# --- Fichiers temporaires ---
+*.tmp
+*.bak
+*.swp
