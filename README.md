@@ -1,3 +1,101 @@
+
+# 🐳 Unraid Docker Startup Orchestrator
+
+<p align="center">
+<img src="assets/interface.png" alt="Unraid Docker Startup Orchestrator Banner" width="800">
+</p>
+
+<p align="center">
+<a href="https://opensource.org/licenses/MIT"><img src="https://img.shields.io/badge/License-MIT-yellow.svg?style=for-the-badge" alt="License: MIT"></a>
+<a href="https://unraid.net"><img src="https://img.shields.io/badge/Platform-Unraid-f4731c.svg?style=for-the-badge&logo=unraid&logoColor=white" alt="Unraid"></a>
+<a href="https://www.docker.com/"><img src="https://img.shields.io/badge/Docker-2496ED?style=for-the-badge&logo=docker&logoColor=white" alt="Docker"></a>
+<a href="https://ko-fi.com/cbh17000"><img src="https://img.shields.io/badge/Support-Ko--fi-F16061?style=for-the-badge&logo=ko-fi&logoColor=white" alt="Support Ko-fi"></a>
+</p>
+🚀 Regain Control of Your Docker Startup
+
+Unraid Docker Startup Orchestrator is a sleek web solution to replace Unraid's cluttered startup with an intelligent, logged, and highly configurable sequence.
+
+The problem: Unraid's native autostart launches everything at once. The result? Your download apps start without a VPN, and your websites crash because the database isn't ready yet.
+
+The solution: Orchestration based on real health checks (running status) and a logical hierarchy.
+
+You can test the interface via GitHub Pages. Or download the index.html file for local use.
+✨ Key Features
+
+Feature & Description
+
+🔍 wait_for --> Intelligent. Checks via the Docker API if the container is truly operational before continuing.
+
+🛡️ Idempotence --> Automatic detection of already active containers to avoid duplicate errors.
+
+📋 Production Logs --> Real-time tracking and history in /tmp/docker_start_order.log.
+
+🌐 AppFeed Integration --> Fetches icons and info directly from Community Applications.
+
+🔒 100% Private --> Local processing in your browser. No data leaves your network.
+🏗️ Startup Logic
+
+Here is how the script organizes the survival of your services after a reboot:
+Extrait de code
+
+    graph TD
+        A[Unraid Array Start] --> B{Group 1: Network}
+        B -->|OK| C[VPN / DNS / AdGuard]
+        C --> D{Group 2: Data}
+        D -->|Wait for Running| E[MariaDB / Postgres / Redis]
+        E --> F{Group 3: Proxy}
+        F -->|OK| G[Nginx Proxy Manager]
+        G --> H[Group 4: Web Applications]
+        H --> I[Group 5: Media & Downloads]
+        I --> J[✅ System Operational]
+
+🛠️ Quick Start
+
+    Generate the script
+
+        Go to the Web Interface.
+
+        Import your containers, organize them via drag-and-drop.
+
+        Click Generate script and copy the code.
+
+# <p align="center">⚠️ Important: Disable native auto-start in the Unraid Docker tab for containers managed by this script.</p>
+📊 Monitoring & Debug
+
+You can monitor the script's progress directly from your Unraid terminal:
+Bash
+
+# To view the startup in real-time
+tail -f /tmp/docker_start_order.log
+
+💾 Backup Structure (JSON)
+
+The tool allows you to export your configuration. Here is what a typical configuration block looks like:
+JSON
+
+{
+  "name": "Databases",
+  "pause": 10,
+  "containers": [
+    { "id": "mariadb", "waitFor": true, "timeout": 45 }
+  ]
+}
+
+🤝 Contribution & Support
+
+Ideas are welcome! Feel free to open an Issue or a Pull Request.
+
+🛠️ Development: HTML5, CSS3 (modern variables), Vanilla JS.
+
+☕ Support: If this tool makes your life easier, you can buy me a [coffee on Ko-fi](https://ko-fi.com/cbh17000) !
+
+<p align="center">
+<i>Developed with ❤️ for the Unraid community.</i>
+</p>
+
+-------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+-------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+
 # 🐳 Unraid Docker Startup Orchestrator
 
 <p align="center">
