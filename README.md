@@ -93,6 +93,9 @@ Ideas are welcome! Feel free to open an Issue or a Pull Request.
 <i>Developed with ❤️ for the Unraid community.</i>
 </p>
 
+This project was developed with AI-assisted coding.
+All architecture, design decisions and validation were supervised and directed by the author.
+
 -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
 -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
 
@@ -204,6 +207,9 @@ Les idées sont les bienvenues ! N'hésitez pas à ouvrir une Issue ou une Pull 
     🛠️ Développement : HTML5, CSS3 (variables modernes), JS Vanilla.
 
 ☕ Soutien : Si cet outil vous simplifie la vie, vous pouvez [payer un café sur Ko-fi](https://ko-fi.com/cbh17000) !.
+
+Ce projet a été développé avec l'assistance d'une IA pour la génération de code.
+La conception, l’architecture, la supervision et les corrections ont été réalisées par l’auteur.
 
 <p align="center">
 <i>Développé avec ❤️ pour la communauté Unraid.</i>
